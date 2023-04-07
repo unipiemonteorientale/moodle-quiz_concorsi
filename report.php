@@ -55,8 +55,14 @@ class quiz_concorsi_report extends quiz_default_report {
     protected $quiz;
     /** @var context the quiz context. */
     protected $context;
-    /** @var students the students having attempted the quiz. */
-    protected $students;
+    /** @var course the course. */
+    protected $course;
+    /** @var component this component. */
+    protected $component;
+    /** @var reviewarea review files area. */
+    protected $reviewarea;
+    /** @var finalizedarea finalized files area. */
+    protected $finalizedarea;
 
     /**
      * Display the report.
@@ -78,6 +84,9 @@ class quiz_concorsi_report extends quiz_default_report {
         $this->reviewarea = 'quiz_reviews';
         $this->finalizedarea = 'finalized';
 
+        //$canrefinalize = get_config('quiz_concorsi', 'allowrefinalize');
+        $canrefinalize = true;
+
         // Check permissions.
         $this->context = context_module::instance($cm->id);
         require_capability('mod/quiz:grade', $this->context);
@@ -92,29 +101,39 @@ class quiz_concorsi_report extends quiz_default_report {
             $files = $fs->get_area_files($this->context->id, $this->component, $this->reviewarea, $itemid);
 
             if (!empty($files)) {
-                $this->print_files($files, 'quiz-attempts-files');
+                $this->print_files($files, 'attemptfiles', 'quiz-attempts-files');
 
                 $finalizedfiles = $fs->get_area_files($this->context->id, $this->component, $this->finalizedarea, $itemid);
                 $zipped = false;
                 $finalized = false;
                 if (!empty($finalizedfiles)) {
                     foreach ($finalizedfiles as $finalizedfile) {
-                        if ($finalizedfile->get_filename() != '.') {
-                            $zipped = $finalizedfile->get_mimetype() === 'application/zip';
-                            $finalized = $finalizedfile->get_mimetype() === 'application/pdf';
+                        $finalizedfilename = $finalizedfile->get_filename();
+                        if ($finalizedfilename !== '.') {
+                            if (!$zipped) {
+                                $zipped = $finalizedfilename == $this->get_finalized_filename('.zip');
+                            }
+                            if (!$finalized) {
+                                $finalized = $finalizedfilename == $this->get_finalized_filename('.pdf');
+                            }
                         }
                     }
                 }
 
                 $action = optional_param('action', '', PARAM_ALPHA);
                 if (!empty($action)) {
-                    if (!$finalized && ($action == 'finalize')) {
-                        $finalized = $this->finalize_quiz();
+                    if ($zipped && (!$finalized || $canrefinalize) && ($action == 'finalize')) {
+                        $finalized = $this->finalize_quiz($canrefinalize);
                     }
                     if (!$zipped && ($action == 'zip')) {
                         $zipped = $this->zip_reviews($files);
+                        $suspened = $this->suspend_quiz_users();
                     }
                     $finalizedfiles = $fs->get_area_files($this->context->id, $this->component, $this->finalizedarea, $itemid);
+                }
+
+                if (!empty($finalizedfiles)) {
+                    $this->print_files($finalizedfiles, 'finalizedfiles', 'quiz-finalized-files');
                 }
 
                 if (!$zipped) {
@@ -128,20 +147,20 @@ class quiz_concorsi_report extends quiz_default_report {
                         'post'
                     );
                 }
-                if (!$finalized) {
+                if ($zipped && (!$finalized || $canrefinalize)) {
+                    $finalizestr = get_string('finalize', 'quiz_concorsi');
+                    if ($finalized && $canrefinalize) {
+                        $finalizestr = get_string('refinalize', 'quiz_concorsi');
+                    }
                     echo $OUTPUT->single_button(
                         new moodle_url('/mod/quiz/report.php', array(
                                 'id' => $cm->id,
                                 'mode' => 'concorsi',
                                 'action' => 'finalize')
                         ),
-                        get_string('finalize', 'quiz_concorsi'),
+                        $finalizestr,
                         'post'
                     );
-                }
-
-                if (!empty($finalizedfiles)) {
-                    $this->print_files($finalizedfiles, 'quiz-finalized-files');
                 }
             }
         } else {
@@ -164,15 +183,23 @@ class quiz_concorsi_report extends quiz_default_report {
      * Print list of file links.
      *
      * @param array $files Files to print.
+     * @param string $langstr Lang string identifier for list header.
      * @param string $class CSS class name for the list.
      *
      * @return void
      */
-    private function print_files($files, $class) {
-        echo html_writer::start_tag('ul', array('class' => $class));
+    private function print_files($files, $langstr, $class) {
+        $content = '';
+        $first = true;
+
         foreach ($files as $file) {
             $filename = $file->get_filename();
             if ($filename != '.') {
+                if ($first) {
+                    $content .= html_writer::tag('h3', get_string($langstr, 'quiz_concorsi'), array('class' => $class . '-title'));
+                    $content .= html_writer::start_tag('ul', array('class' => $class . '-list'));
+                    $first = false;
+                }
                 $urldownload = moodle_url::make_pluginfile_url(
                     $file->get_contextid(),
                     $file->get_component(),
@@ -183,10 +210,13 @@ class quiz_concorsi_report extends quiz_default_report {
                     true
                 );
                 $downloadlink = html_writer::tag('a', $filename, array('href' => $urldownload));
-                echo html_writer::tag('li', $downloadlink);
+                $content .= html_writer::tag('li', $downloadlink);
             }
         }
-        echo html_writer::end_tag('ul');
+        if (!$first) {
+            $content .= html_writer::end_tag('ul');
+            echo html_writer::tag('div', $content, array('class' => $class));
+        }
     }
 
     /**
@@ -236,17 +266,94 @@ class quiz_concorsi_report extends quiz_default_report {
     }
 
     /**
-     * Create and store a pdf file with all quiz reports.
+     * Suspend users that tried the quiz.
      *
      * @return boolean True on success and false on failure.
      */
-    private function finalize_quiz() {
+    private function suspend_quiz_users() {
         global $DB;
 
+        $result = true;
         $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
 
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
+                $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
+                $result = $result && $DB->set_field('user', 'suspended', 1, array('id' => $attemptobj->get_userid()));
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Create and store a pdf and an Excel file with all quiz reports.
+     *
+     * @return boolean True on success and false on failure.
+     */
+    private function finalize_quiz() {
+        global $CFG, $DB, $PAGE;
+
+        //$canrefinalize = get_config('quiz_concorsi', 'allowrefinalize');
+        $canrefinalize = true;
+
+        $nowstr = userdate(time(), '%F-%T');
+
+        $pdfname = $this->get_finalized_filename('.pdf');
+        $fs = get_file_storage();
+        $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $pdfname);
+        if (!empty($pdffile)) {
+            if (!$canrefinalize) {
+                return true;
+            } else {
+                $pdfname = $this->get_finalized_filename('-' . $nowstr . '.pdf');
+            }
+        }
+
+        $xlsname = $this->get_finalized_filename('.xlsx');
+        $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $xlsname);
+        if (!empty($xlsfile)) {
+            if (!$canrefinalize) {
+                return true;
+            } else {
+                $xlsname = $this->get_finalized_filename('-' . $nowstr . '.xlsx');
+            }
+        }
+
+        $tempdir = make_temp_directory('core_plugin/quiz_concorsi');
+
+        // Create Excel Workbook and define cell formats.
+        require_once('classes/extendedexcellib.class.php');
+        $workbook = new ExtendedMoodleExcelWorkbook($xlsname);
+        $myxls = $workbook->add_worksheet($nowstr);
+        $format = $workbook->add_format();
+        $format->set_bold(0);
+        $formatbc = $workbook->add_format();
+        $formatbc->set_bold(1);
+        $formatbc->set_align('center');
+        $rownum = 0;
+
+        // Create PDF object and define header and footer.
+        require_once($CFG->libdir . '/pdflib.php');
+        $pdftempfilepath = $tempdir . DIRECTORY_SEPARATOR . $pdfname;
+        $doc = new pdf;
+        $doc->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
+        $quizdata = $this->get_finalized_filename('') . '-' . $nowstr;
+        $doc->SetHeaderData(null, null, null, $quizdata);
+        $doc->SetFooterData(array(0, 0, 0), array(0, 0, 0));
+
+        $doc->SetTopMargin(18);
+        $doc->SetHeaderMargin(PDF_MARGIN_HEADER);
+        $doc->SetFooterMargin(PDF_MARGIN_FOOTER);
+
+        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        if (!empty($attempts)) {
+            foreach ($attempts as $attempt) {
+                // PDF data content.
+                $content = '';
+
+                // Excel row data content.
+                $row = array();
+
                 $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
                 $student = $DB->get_record('user', array('id' => $attemptobj->get_userid()));
 
@@ -254,18 +361,22 @@ class quiz_concorsi_report extends quiz_default_report {
                 $summarydata['user'] = array();
                 $summarydata['user']['title'] = get_string('candidate', 'quiz_concorsi');
                 $summarydata['user']['content'] = fullname($student, true);
+                $row['lastname'] = '';
+                $row['firstname'] = '';
 
                 $summarydata['username'] = array();
                 $summarydata['username']['title'] = get_string('username');
                 $summarydata['username']['content'] = $student->username;
+                $row['username'] = $student->username;
 
                 $summarydata['idnumber'] = array();
                 $summarydata['idnumber']['title'] = get_string('idnumber');
                 $summarydata['idnumber']['content'] = $student->idnumber;
+                $row['idnumber'] = $student->idnumber;
 
                 // Show marks (if the user is allowed to see marks at the moment).
-                $grade = quiz_rescale_grade($attempt->sumgrades, $quiz, false);
-                if ($options->marks >= question_display_options::MARK_AND_MAX && quiz_has_grades($quiz)) {
+                $grade = quiz_rescale_grade($attempt->sumgrades, $this->quiz, false);
+                if (quiz_has_grades($this->quiz)) {
 
                     if ($attempt->state != quiz_attempt::FINISHED) {
                         // Cannot display grade.
@@ -273,28 +384,30 @@ class quiz_concorsi_report extends quiz_default_report {
                     } else if (is_null($grade)) {
                         $summarydata['grade'] = array(
                             'title' => get_string('grade', 'quiz'),
-                            'content' => quiz_format_grade($quiz, $grade),
+                            'content' => quiz_format_grade($this->quiz, $grade),
                         );
+                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
 
                     } else {
                         // Show raw marks only if they are different from the grade (like on the view page).
-                        if ($quiz->grade != $quiz->sumgrades) {
+                        if ($this->quiz->grade != $this->quiz->sumgrades) {
                             $a = new stdClass();
-                            $a->grade = quiz_format_grade($quiz, $attempt->sumgrades);
-                            $a->maxgrade = quiz_format_grade($quiz, $quiz->sumgrades);
+                            $a->grade = quiz_format_grade($this->quiz, $attempt->sumgrades);
+                            $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->sumgrades);
                             $summarydata['marks'] = array(
                                 'title' => get_string('marks', 'quiz'),
                                 'content' => get_string('outofshort', 'quiz', $a),
                             );
+                            $row['marks'] = quiz_format_grade($this->quiz, $attempt->sumgrades);
                         }
 
                         // Now the scaled grade.
                         $a = new stdClass();
-                        $a->grade = html_writer::tag('b', quiz_format_grade($quiz, $grade));
-                        $a->maxgrade = quiz_format_grade($quiz, $quiz->grade);
-                        if ($quiz->grade != 100) {
+                        $a->grade = html_writer::tag('b', quiz_format_grade($this->quiz, $grade));
+                        $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->grade);
+                        if ($this->quiz->grade != 100) {
                             $a->percent = html_writer::tag('b', format_float(
-                                $attempt->sumgrades * 100 / $quiz->sumgrades, 0));
+                                $attempt->sumgrades * 100 / $this->quiz->sumgrades, 0));
                             $formattedgrade = get_string('outofpercent', 'quiz', $a);
                         } else {
                             $formattedgrade = get_string('outof', 'quiz', $a);
@@ -303,9 +416,119 @@ class quiz_concorsi_report extends quiz_default_report {
                             'title' => get_string('grade', 'quiz'),
                             'content' => $formattedgrade,
                         );
+                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
                     }
                 }
 
+                // Feedback if there is any, and the user is allowed to see it now.
+                $feedback = $attemptobj->get_overall_feedback($grade);
+                if ($feedback) {
+                    $summarydata['feedback'] = array(
+                        'title' => get_string('feedback', 'quiz'),
+                        'content' => $feedback,
+                    );
+                }
+
+                $renderer = $PAGE->get_renderer('mod_quiz');
+                $content .= $renderer->review_summary_table($summarydata, 0);
+
+                $slots = $attemptobj->get_slots();
+
+                foreach ($slots as $slot) {
+                    $originalslot = $attemptobj->get_original_slot($slot);
+                    $number = $attemptobj->get_question_number($originalslot);
+                    $displayoptions = $attemptobj->get_display_options_with_edit_link(true, $slot, "");
+                    $displayoptions->marks = 2;
+                    $displayoptions->manualcomment = 1;
+                    $displayoptions->feedback = 1;
+                    $displayoptions->correctness = 1;
+                    $displayoptions->numpartscorrect = 1;
+                    $displayoptions->history = 0;
+                    $displayoptions->flags = 0;
+                    $displayoptions->manualcommentlink = 0;
+
+                    if ($slot != $originalslot) {
+                        $attemptobj->get_question_attempt($slot)->set_max_mark(
+                            $attemptobj->get_question_attempt($originalslot)->get_max_mark());
+                    }
+                    $quba = question_engine::load_questions_usage_by_activity($attemptobj->get_uniqueid());
+                    $content .= $quba->render_question($slot, $displayoptions, $number);
+
+                }
+
+                // Define spreadsheet column headers.
+                if ($rownum == 0) {
+                    $colnum = 0;
+                    foreach (array_keys($row) as $item) {
+                        $colstr = '';
+                        if ($item == 'marks') {
+                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->sumgrades);
+                        } else if ($item == 'grade') {
+                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->grade);
+                        } else {
+                            $colstr = get_string($item);
+                        }
+                        $myxls->write($rownum, $colnum, $colstr, $formatbc);
+                        $colnum++;
+                    }
+                    $rownum++;
+                }
+
+                // Insert spreadsheet values for current attempt.
+                $colnum = 0;
+                foreach ($row as $item) {
+                    $myxls->write($rownum, $colnum, $item, $format);
+                    $colnum++;
+                }
+                $rownum++;
+
+                $doc->AddPage();
+                $doc->writeHTML($content);
+            }
+
+            // Store Excel and PDF files.
+            $xlstempfilepath = $tempdir . DIRECTORY_SEPARATOR . $xlsname;
+            $workbook->save($tempdir);
+
+            $doc->lastPage();
+            $doc->Output($pdftempfilepath, 'F');
+
+            if ($this->store_finalized_file($pdfname, $pdftempfilepath) &&
+                    $this->store_finalized_file($xlsname, $xlstempfilepath)) {
+                return true;
+            }
+
+        }
+        return false;
+    }
+
+    /**
+     * Store file finalized file into Moodle filesystem.
+     *
+     * @param  string $filename The filename to store.
+     * @param  string $filepath The filepath where the temporary file is stored.
+     *
+     * @return boolean True on success and false on failure.
+     */
+    private function store_finalized_file($filename, $filepath) {
+        if (!empty($filepath) && !file_exists($filepath)) {
+            $fileinfo = [
+                'contextid' => $this->context->id,
+                'component' => $this->component,
+                'filearea' => $this->finalizedarea,
+                'itemid' => $this->quiz->id,
+                'filepath' => '/',
+                'filename' => $filename,
+            ];
+
+            $fs = get_file_storage();
+            $fs->create_file_from_pathname($fileinfo, $filepath);
+
+            unlink($filepath);
+
+            $file = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $filename);
+            if (!empty($file)) {
+                return true;
             }
         }
         return false;

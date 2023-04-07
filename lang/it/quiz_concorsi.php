@@ -23,15 +23,15 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-$string['pluginname'] = 'Archive public exam files';
-$string['concorsi'] = 'Archive public exam files';
-$string['quiznotclosed'] = 'Please close quiz before archive public exam files';
-$string['finalize'] = 'Finalize public exam reports';
-$string['refinalize'] = 'Refinalize public exam reports';
-$string['zip'] = 'Compress public exam reports';
-$string['candidate'] = 'Candidate';
-$string['attemptfiles'] = 'Attempt files';
-$string['finalizedfiles'] = 'Finalized files';
+$string['pluginname'] = 'Archiviazione Concorsi';
+$string['concorsi'] = 'Archivia file del concorso';
+$string['quiznotclosed'] = 'Si prega di chiudere il quiz prima di archiviare i file del concorso';
+$string['finalize'] = 'Finalizza i resoconti del concorso';
+$string['refinalize'] = 'Rifinalizza i resoconti del concorso';
+$string['zip'] = 'Crea archivio ZIP delle prove';
+$string['candidate'] = 'Candidato';
+$string['attemptfiles'] = 'File delle prove';
+$string['finalizedfiles'] = 'File finalizzati';
 
 // PRIVACY.
-$string['privacy:metadata'] = 'The quiz Archive public exam files plugin does not store any personal data about any user.';
+$string['privacy:metadata'] = 'Il plugin Archiviazione Concorsi quiz non salva alcun dato personale degli utenti.';
