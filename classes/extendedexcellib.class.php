@@ -18,7 +18,7 @@
  * Extended Excel writer abstraction layer.
  *
  * @package   quiz_concorsi
- * @copyright UPO <https://www.uniupo.it>
+ * @copyright UPO www.uniupo.it
  * @author    Roberto Pinna
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -35,7 +35,7 @@ require_once($CFG->libdir . '/excellib.class.php');
  * Extend Excel write for Moodle Workbook.
  *
  * @package   quiz_concorsi
- * @copyright UPO <https://www.uniupo.it>
+ * @copyright UPO www.uniupo.it
  * @author    Roberto Pinna
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
