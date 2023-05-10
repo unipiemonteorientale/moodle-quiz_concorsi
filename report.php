@@ -34,6 +34,9 @@ require_once($CFG->dirroot . '/mod/quiz/attemptlib.php');
 require_once($CFG->libdir . '/pagelib.php');
 require_once($CFG->libdir . '/filestorage/zip_packer.php');
 
+define('ENROLLED', 1);
+define('ATTEMPTED', 2);
+
 /**
  * Quiz report subclass for the concorsi report.
  *
@@ -84,8 +87,7 @@ class quiz_concorsi_report extends quiz_default_report {
         $this->reviewarea = 'quiz_reviews';
         $this->finalizedarea = 'finalized';
 
-        //$canrefinalize = get_config('quiz_concorsi', 'allowrefinalize');
-        $canrefinalize = true;
+        $canrefinalize = get_config('theme_concorsi', 'allowrefinalize');
 
         // Check permissions.
         $this->context = context_module::instance($cm->id);
@@ -127,6 +129,8 @@ class quiz_concorsi_report extends quiz_default_report {
                     }
                     if (!$zipped && ($action == 'zip')) {
                         $zipped = $this->zip_reviews($files);
+                    }
+                    if (($action == 'finalize') || ($action == 'zip')) {
                         $suspened = $this->suspend_quiz_users();
                     }
                     $finalizedfiles = $fs->get_area_files($this->context->id, $this->component, $this->finalizedarea, $itemid);
@@ -273,14 +277,31 @@ class quiz_concorsi_report extends quiz_default_report {
     private function suspend_quiz_users() {
         global $DB;
 
-        $result = true;
-        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        $suspendmode = get_config('theme_concorsi', 'suspendmode');
 
-        if (!empty($attempts)) {
-            foreach ($attempts as $attempt) {
-                $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
-                $result = $result && $DB->set_field('user', 'suspended', 1, array('id' => $attemptobj->get_userid()));
-            }
+        $result = true;
+
+        switch ($suspendmode) {
+            case ATTEMPTED:
+                $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+
+                if (!empty($attempts)) {
+                    foreach ($attempts as $attempt) {
+                        $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
+                        $result = $result && $DB->set_field('user', 'suspended', 1, array('id' => $attemptobj->get_userid()));
+                    }
+                }
+            break;
+            case ENROLLED:
+                $students = get_enrolled_users($this->context, 'mod/quiz:attempt');
+                if (!empty($students)) {
+                    foreach ($students as $student) {
+                        if ($student->suspended == 0) {
+                            $result = $result && $DB->set_field('user', 'suspended', 1, array('id' => $student->id));
+                        }
+                    }
+                }
+            break;
         }
         return $result;
     }
@@ -293,8 +314,7 @@ class quiz_concorsi_report extends quiz_default_report {
     private function finalize_quiz() {
         global $CFG, $DB, $PAGE;
 
-        //$canrefinalize = get_config('quiz_concorsi', 'allowrefinalize');
-        $canrefinalize = true;
+        $canrefinalize = get_config('theme_concorsi', 'allowrefinalize');
 
         $nowstr = userdate(time(), '%F-%T');
 
@@ -303,7 +323,7 @@ class quiz_concorsi_report extends quiz_default_report {
         $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $pdfname);
         if (!empty($pdffile)) {
             if (!$canrefinalize) {
-                return true;
+                return false;
             } else {
                 $pdfname = $this->get_finalized_filename('-' . $nowstr . '.pdf');
             }
@@ -313,7 +333,7 @@ class quiz_concorsi_report extends quiz_default_report {
         $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $xlsname);
         if (!empty($xlsfile)) {
             if (!$canrefinalize) {
-                return true;
+                return false;
             } else {
                 $xlsname = $this->get_finalized_filename('-' . $nowstr . '.xlsx');
             }
@@ -497,7 +517,6 @@ class quiz_concorsi_report extends quiz_default_report {
                     $this->store_finalized_file($xlsname, $xlstempfilepath)) {
                 return true;
             }
-
         }
         return false;
     }
@@ -511,7 +530,7 @@ class quiz_concorsi_report extends quiz_default_report {
      * @return boolean True on success and false on failure.
      */
     private function store_finalized_file($filename, $filepath) {
-        if (!empty($filepath) && !file_exists($filepath)) {
+        if (!empty($filepath) && file_exists($filepath)) {
             $fileinfo = [
                 'contextid' => $this->context->id,
                 'component' => $this->component,
@@ -523,7 +542,6 @@ class quiz_concorsi_report extends quiz_default_report {
 
             $fs = get_file_storage();
             $fs->create_file_from_pathname($fileinfo, $filepath);
-
             unlink($filepath);
 
             $file = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $filename);
