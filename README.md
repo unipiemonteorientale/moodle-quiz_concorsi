@@ -7,7 +7,8 @@ Concorsi Theme, Concorsi local plugin and Concorsi quiz report.
 Requirements
 ------------
 
-This plugin requires Moodle 4.0.
+This plugin requires Moodle 4 and above.
+It also require the Theme Concorsi.
 
 Installation
 ------------
