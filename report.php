@@ -457,22 +457,44 @@ class quiz_concorsi_report extends quiz_default_report {
                 foreach ($slots as $slot) {
                     $originalslot = $attemptobj->get_original_slot($slot);
                     $number = $attemptobj->get_question_number($originalslot);
-                    $displayoptions = $attemptobj->get_display_options_with_edit_link(true, $slot, "");
-                    $displayoptions->marks = 2;
-                    $displayoptions->manualcomment = 1;
-                    $displayoptions->feedback = 1;
-                    $displayoptions->correctness = 1;
-                    $displayoptions->numpartscorrect = 1;
-                    $displayoptions->history = 0;
-                    $displayoptions->flags = 0;
-                    $displayoptions->manualcommentlink = 0;
+
+                    $qa = $attemptobj->get_question_attempt($slot);
 
                     if ($slot != $originalslot) {
-                        $attemptobj->get_question_attempt($slot)->set_max_mark(
-                            $attemptobj->get_question_attempt($originalslot)->get_max_mark());
+                        $qa->set_max_mark($attemptobj->get_question_attempt($originalslot)->get_max_mark());
                     }
-                    $quba = question_engine::load_questions_usage_by_activity($attemptobj->get_uniqueid());
-                    $content .= $quba->render_question($slot, $displayoptions, $number);
+                    $displayoptions = $attemptobj->get_display_options(true);
+
+                    $content .= html_writer::tag('<h2>', get_string('questionnumber', 'quiz_concorsi', $number));
+                    $content .= html_writer::tag('<pre>', rtrim($qa->get_question_summary()));
+                    $content .= html_writer::tag('<h3>', get_string('answer', 'quiz'));
+                    $content .= html_writer::tag('<pre>', rtrim($qa->get_response_summary()));
+
+                    if (is_null($qa->get_fraction())) {
+                        $mark = $qa->format_max_mark($displayoptions->markdp);
+                        $content .= html_writer::tag('<p>',get_string('markedoutofmax', 'question', $mark));
+                    } else {
+                        $grade = new stdClass();
+                        $grade->mark = $qa->format_mark($displayoptions->markdp);
+                        $grade->max = $qa->format_max_mark($displayoptions->markdp);
+                        $content .= html_writer::tag('<p>', get_string('markoutofmax', 'question', $grade));
+                    }
+
+                    $rightanswer = rtrim($qa->get_right_answer_summary());
+                    if (!empty($rightanswer)) {
+                        $content .= html_writer::tag('<h3>', get_string('rightanswer', 'question'));
+                        $content .= html_writer::tag('<pre>', $rightanswer);
+                    }
+
+                    $manualcomment = $qa->get_current_manual_comment();
+                    if (!empty($manualcomment[0])) {
+                        $content .= html_writer::tag('<h3>', get_string('comment', 'question'));
+                        $comment = $manualcomment[0];
+                        $commentformat = $manualcomment[1];
+                        html_writer::tag('<pre>', rtrim($qa->get_question()->html_to_text($coment, $commentformat)));
+                    }
+
+                    $content .= html_writer::empty_tag('<hr>', array());
 
                 }
 

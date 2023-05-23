@@ -32,6 +32,7 @@ $string['zip'] = 'Crea archivio ZIP delle prove';
 $string['candidate'] = 'Candidato';
 $string['attemptfiles'] = 'File delle prove';
 $string['finalizedfiles'] = 'File finalizzati';
+$string['questionnumber'] = 'Domanda {$a}';
 
 // PRIVACY.
 $string['privacy:metadata'] = 'Il plugin Archiviazione Concorsi quiz non salva alcun dato personale degli utenti.';

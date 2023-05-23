@@ -32,6 +32,7 @@ $string['zip'] = 'Compress public exam reports';
 $string['candidate'] = 'Candidate';
 $string['attemptfiles'] = 'Attempt files';
 $string['finalizedfiles'] = 'Finalized files';
+$string['questionnumber'] = 'Question {$a}';
 
 // PRIVACY.
 $string['privacy:metadata'] = 'The quiz Archive public exam files plugin does not store any personal data about any user.';
