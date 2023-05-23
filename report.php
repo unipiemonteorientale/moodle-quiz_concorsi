@@ -472,7 +472,7 @@ class quiz_concorsi_report extends quiz_default_report {
 
                     if (is_null($qa->get_fraction())) {
                         $mark = $qa->format_max_mark($displayoptions->markdp);
-                        $content .= html_writer::tag('<p>',get_string('markedoutofmax', 'question', $mark));
+                        $content .= html_writer::tag('<p>', get_string('markedoutofmax', 'question', $mark));
                     } else {
                         $grade = new stdClass();
                         $grade->mark = $qa->format_mark($displayoptions->markdp);
