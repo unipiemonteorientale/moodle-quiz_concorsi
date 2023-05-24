@@ -4,6 +4,8 @@ Moodle quiz report plugin that generate a pdf file with all quiz attempts.
 This plugin is intended to use in public exams and is part of concorsi plugin suite:
 Concorsi Theme, Concorsi local plugin and Concorsi quiz report.
 
+This suite for conducting tests for public exams is the result of collaboration with the University of Verona.
+
 Requirements
 ------------
 
