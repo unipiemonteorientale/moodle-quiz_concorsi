@@ -25,11 +25,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2023050900;
+$plugin->version = 2023061400;
 $plugin->requires = 2018110800;
 $plugin->component = 'quiz_concorsi';
-$plugin->maturity = MATURITY_BETA;
-$plugin->release = '0.9';
+$plugin->maturity = MATURITY_STABLE;
+$plugin->release = '1.0';
 $plugin->dependencies = array(
     'theme_concorsi' => 2023021500
 );

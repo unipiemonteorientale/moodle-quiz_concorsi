@@ -34,5 +34,7 @@ $string['attemptfiles'] = 'File delle prove';
 $string['finalizedfiles'] = 'File finalizzati';
 $string['questionnumber'] = 'Domanda {$a}';
 
+$string['concorsi:archivereviews'] = 'Archivia resoconti del concorso';
+$string['concorsi:downloadreviews'] = 'Download resoconti del concorso';
 // PRIVACY.
 $string['privacy:metadata'] = 'Il plugin Archiviazione Concorsi quiz non salva alcun dato personale degli utenti.';

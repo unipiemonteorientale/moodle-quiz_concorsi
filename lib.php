@@ -48,7 +48,7 @@ function quiz_concorsi_pluginfile($course, $cm, $context, string $filearea, arra
 
     require_login($course, true);
 
-    if (!has_capability('mod/quiz:grade', $context)) {
+    if (!has_capability('quiz/concorsi:downloadreviews', $context)) {
         return false;
     }
 

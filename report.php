@@ -124,23 +124,25 @@ class quiz_concorsi_report extends quiz_default_report {
 
                 $action = optional_param('action', '', PARAM_ALPHA);
                 if (!empty($action)) {
-                    if ($zipped && (!$finalized || $canrefinalize) && ($action == 'finalize')) {
-                        $finalized = $this->finalize_quiz($canrefinalize);
+                    if (has_capability('quiz/concorsi:archivereviews', $this->context)) {
+                        if ($zipped && (!$finalized || $canrefinalize) && ($action == 'finalize')) {
+                            $finalized = $this->finalize_quiz($canrefinalize);
+                        }
+                        if (!$zipped && ($action == 'zip')) {
+                            $zipped = $this->zip_reviews($files);
+                        }
+                        if (($action == 'finalize') || ($action == 'zip')) {
+                            $suspened = $this->suspend_quiz_users();
+                        }
+                        $finalizedfiles = $fs->get_area_files($this->context->id, $this->component, $this->finalizedarea, $itemid);
                     }
-                    if (!$zipped && ($action == 'zip')) {
-                        $zipped = $this->zip_reviews($files);
-                    }
-                    if (($action == 'finalize') || ($action == 'zip')) {
-                        $suspened = $this->suspend_quiz_users();
-                    }
-                    $finalizedfiles = $fs->get_area_files($this->context->id, $this->component, $this->finalizedarea, $itemid);
                 }
 
                 if (!empty($finalizedfiles)) {
                     $this->print_files($finalizedfiles, 'finalizedfiles', 'quiz-finalized-files');
                 }
 
-                if (!$zipped) {
+                if ((!$zipped) && has_capability('quiz/concorsi:archivereviews', $this->context)) {
                     echo $OUTPUT->single_button(
                         new moodle_url('/mod/quiz/report.php', array(
                                 'id' => $cm->id,
@@ -151,7 +153,7 @@ class quiz_concorsi_report extends quiz_default_report {
                         'post'
                     );
                 }
-                if ($zipped && (!$finalized || $canrefinalize)) {
+                if ($zipped && (!$finalized || $canrefinalize) && has_capability('quiz/concorsi:archivereviews', $this->context)) {
                     $finalizestr = get_string('finalize', 'quiz_concorsi');
                     if ($finalized && $canrefinalize) {
                         $finalizestr = get_string('refinalize', 'quiz_concorsi');
@@ -204,17 +206,21 @@ class quiz_concorsi_report extends quiz_default_report {
                     $content .= html_writer::start_tag('ul', array('class' => $class . '-list'));
                     $first = false;
                 }
-                $urldownload = moodle_url::make_pluginfile_url(
-                    $file->get_contextid(),
-                    $file->get_component(),
-                    $file->get_filearea(),
-                    $file->get_itemid(),
-                    $file->get_filepath(),
-                    $filename,
-                    true
-                );
-                $downloadlink = html_writer::tag('a', $filename, array('href' => $urldownload));
-                $content .= html_writer::tag('li', $downloadlink);
+                if (has_capability('quiz/concorsi:downloadreviews', $this->context)) {
+                    $urldownload = moodle_url::make_pluginfile_url(
+                        $file->get_contextid(),
+                        $file->get_component(),
+                        $file->get_filearea(),
+                        $file->get_itemid(),
+                        $file->get_filepath(),
+                        $filename,
+                        true
+                    );
+                    $downloadlink = html_writer::tag('a', $filename, array('href' => $urldownload));
+                    $content .= html_writer::tag('li', $downloadlink);
+                } else {
+                    $content .= html_writer::tag('li', $filename);
+                }
             }
         }
         if (!$first) {
