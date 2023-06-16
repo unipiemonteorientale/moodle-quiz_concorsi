@@ -49,7 +49,7 @@ define('ATTEMPTED', 2);
  * @author    Roberto Pinna
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class quiz_concorsi_report extends quiz_default_report {
+class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
     /** @var object the questions that comprise this quiz.. */
     protected $questions;
     /** @var object course module object. */
