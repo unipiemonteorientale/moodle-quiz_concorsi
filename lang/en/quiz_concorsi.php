@@ -33,6 +33,7 @@ $string['candidate'] = 'Candidate';
 $string['attemptfiles'] = 'Attempt files';
 $string['finalizedfiles'] = 'Finalized files';
 $string['questionnumber'] = 'Question {$a}';
+$string['filehash'] = 'File hash';
 
 $string['concorsi:archivereviews'] = 'Archive quiz reviews';
 $string['concorsi:downloadreviews'] = 'Download quiz reviews';

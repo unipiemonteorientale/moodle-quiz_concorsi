@@ -400,6 +400,24 @@ class quiz_concorsi_report extends quiz_default_report {
                 $summarydata['idnumber']['content'] = $student->idnumber;
                 $row['idnumber'] = $student->idnumber;
 
+                $summarydata['filehash'] = array();
+                $summarydata['filehash']['title'] = get_string('filehash', 'quiz_concorsi');
+                $idnumber = str_pad($student->idnumber, 6, '0', STR_PAD_LEFT);
+                $filename = clean_param(fullname($student) . '-' . $idnumber . '.pdf', PARAM_FILE);
+                $filehash = '';
+                $file = $fs->get_file($this->context->id, $this->component, $this->reviewarea, $this->quiz->id, '/', $filename);
+                if (!empty($file)) {
+                    $filehash = $file->get_contenthash();
+                } else {
+                    $filename = clean_param(fullname($USER) . '-' . $idnumber . '-' . $attempt->id . '.pdf', PARAM_FILE);
+                    $file = $fs->get_file($this->context->id, $this->component, $this->reviewarea, $this->quiz->id, '/', $filename);
+                    if (!empty($file)) {
+                        $filehash = $file->get_contenthash();
+                    }
+                }
+                $summarydata['filehash']['content'] = $filehash;
+                $row['filehash'] = $filehash;
+
                 // Show marks (if the user is allowed to see marks at the moment).
                 $grade = quiz_rescale_grade($attempt->sumgrades, $this->quiz, false);
                 if (quiz_has_grades($this->quiz)) {
@@ -513,6 +531,8 @@ class quiz_concorsi_report extends quiz_default_report {
                             $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->sumgrades);
                         } else if ($item == 'grade') {
                             $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->grade);
+                        } else if ($item == 'filehash') {
+                            $colstr = get_string('filehash', 'quiz_concorsi');
                         } else {
                             $colstr = get_string($item);
                         }
