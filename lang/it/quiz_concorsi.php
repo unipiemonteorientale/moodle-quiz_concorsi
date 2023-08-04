@@ -34,6 +34,8 @@ $string['attemptfiles'] = 'File delle prove';
 $string['finalizedfiles'] = 'File finalizzati';
 $string['questionnumber'] = 'Domanda {$a}';
 $string['filehash'] = 'Hash del file della prova';
+$string['answer'] = 'Risposta data';
+$string['rightanswer'] = 'Risposta esatta';
 
 $string['concorsi:archivereviews'] = 'Archivia resoconti del concorso';
 $string['concorsi:downloadreviews'] = 'Download resoconti del concorso';

@@ -491,7 +491,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
                     $content .= html_writer::tag('<h2>', get_string('questionnumber', 'quiz_concorsi', $number));
                     $content .= html_writer::tag('<pre>', rtrim($qa->get_question_summary()));
-                    $content .= html_writer::tag('<h3>', get_string('answer', 'quiz'));
+                    $content .= html_writer::tag('<h3>', get_string('answer', 'quiz_concorsi'));
                     $content .= html_writer::tag('<pre>', rtrim($qa->get_response_summary()));
 
                     if (is_null($qa->get_fraction())) {
@@ -506,7 +506,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
                     $rightanswer = rtrim($qa->get_right_answer_summary());
                     if (!empty($rightanswer)) {
-                        $content .= html_writer::tag('<h3>', get_string('rightanswer', 'question'));
+                        $content .= html_writer::tag('<h3>', get_string('rightanswer', 'quiz_concorsi'));
                         $content .= html_writer::tag('<pre>', $rightanswer);
                     }
 
