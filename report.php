@@ -195,17 +195,12 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * @return void
      */
     private function print_files($files, $langstr, $class) {
-        $content = '';
-        $first = true;
+        $filelist = '';
+        $count = 0;
 
         foreach ($files as $file) {
             $filename = $file->get_filename();
             if ($filename != '.') {
-                if ($first) {
-                    $content .= html_writer::tag('h3', get_string($langstr, 'quiz_concorsi'), array('class' => $class . '-title'));
-                    $content .= html_writer::start_tag('ul', array('class' => $class . '-list'));
-                    $first = false;
-                }
                 if (has_capability('quiz/concorsi:downloadreviews', $this->context)) {
                     $urldownload = moodle_url::make_pluginfile_url(
                         $file->get_contextid(),
@@ -217,13 +212,17 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         true
                     );
                     $downloadlink = html_writer::tag('a', $filename, array('href' => $urldownload));
-                    $content .= html_writer::tag('li', $downloadlink);
+                    $filelist .= html_writer::tag('li', $downloadlink);
                 } else {
-                    $content .= html_writer::tag('li', $filename);
+                    $filelist .= html_writer::tag('li', $filename);
                 }
+                $count++;
             }
         }
-        if (!$first) {
+        if ($count > 0) {
+            $content = html_writer::tag('h3', get_string($langstr, 'quiz_concorsi', $count), array('class' => $class . '-title'));
+            $content .= html_writer::start_tag('ul', array('class' => $class . '-list'));
+            $content .= $filelist;
             $content .= html_writer::end_tag('ul');
             echo html_writer::tag('div', $content, array('class' => $class));
         }
