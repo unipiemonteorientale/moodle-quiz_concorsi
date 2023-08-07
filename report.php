@@ -155,8 +155,20 @@ class quiz_concorsi_report extends quiz_default_report {
                 }
                 if ($zipped && (!$finalized || $canrefinalize) && has_capability('quiz/concorsi:archivereviews', $this->context)) {
                     $finalizestr = get_string('finalize', 'quiz_concorsi');
+                    $confirmattrs = array();
                     if ($finalized && $canrefinalize) {
                         $finalizestr = get_string('refinalize', 'quiz_concorsi');
+                    }
+                    if (!$finalized && !$canrefinalize) {
+                        $destination = 'javascript:document.getElementsByName("finalize")[0].parentElement.submit();';
+                        $confirmattrs = array(
+                            'name' => 'finalize',
+                            'data-modal' => 'confirmation',
+                            'data-modal-title-str' => json_encode(['finalize', 'quiz_concorsi']),
+                            'data-modal-content-str' => json_encode(['areyousure', 'quiz_concorsi']),
+                            'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
+                            'data-modal-destination' => $destination,
+                        );
                     }
                     echo $OUTPUT->single_button(
                         new moodle_url('/mod/quiz/report.php', array(
@@ -165,7 +177,8 @@ class quiz_concorsi_report extends quiz_default_report {
                                 'action' => 'finalize')
                         ),
                         $finalizestr,
-                        'post'
+                        'post',
+                        $confirmattrs
                     );
                 }
             }
