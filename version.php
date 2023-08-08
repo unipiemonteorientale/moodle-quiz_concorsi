@@ -26,7 +26,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->version = 2023061400;
-$plugin->requires = 2018110800;
+$plugin->requires = 2022112800;
+$plugin->supported = [401];
 $plugin->component = 'quiz_concorsi';
 $plugin->maturity = MATURITY_STABLE;
 $plugin->release = '1.0';
