@@ -27,8 +27,10 @@ use mod_quiz\local\reports\report_base;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->dirroot . '/mod/quiz/report/attemptsreport.php');
 require_once($CFG->dirroot . '/mod/quiz/report/reportlib.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+require_once($CFG->dirroot . '/mod/quiz/attemptlib.php');
 require_once($CFG->libdir . '/pagelib.php');
 require_once($CFG->libdir . '/filestorage/zip_packer.php');
 
