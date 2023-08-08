@@ -27,10 +27,8 @@ use mod_quiz\local\reports\report_base;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/mod/quiz/report/attemptsreport.php');
 require_once($CFG->dirroot . '/mod/quiz/report/reportlib.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
-require_once($CFG->dirroot . '/mod/quiz/attemptlib.php');
 require_once($CFG->libdir . '/pagelib.php');
 require_once($CFG->libdir . '/filestorage/zip_packer.php');
 
@@ -93,8 +91,26 @@ class quiz_concorsi_report extends quiz_default_report {
         $this->context = context_module::instance($cm->id);
         require_capability('mod/quiz:grade', $this->context);
 
+        $action = optional_param('action', '', PARAM_ALPHA);
+        if (!empty($action)) {
+            if ($action == 'downloadgrades') {
+                $this->download_grades_file();
+                exit();
+            }
+        }
+
         // Start output.
         $this->print_header_and_tabs($cm, $course, $quiz, 'concorsi');
+
+        echo $OUTPUT->single_button(
+            new moodle_url('/mod/quiz/report.php', array(
+                    'id' => $cm->id,
+                    'mode' => 'concorsi',
+                    'action' => 'downloadgrades')
+            ),
+            get_string('downloadgradesfile', 'quiz_concorsi'),
+            'post'
+        );
 
         if (!empty($quiz->timeclose) && ($quiz->timeclose < time())) {
             $itemid = $this->quiz->id;
@@ -122,11 +138,10 @@ class quiz_concorsi_report extends quiz_default_report {
                     }
                 }
 
-                $action = optional_param('action', '', PARAM_ALPHA);
                 if (!empty($action)) {
                     if (has_capability('quiz/concorsi:archivereviews', $this->context)) {
                         if ($zipped && (!$finalized || $canrefinalize) && ($action == 'finalize')) {
-                            $finalized = $this->finalize_quiz($canrefinalize);
+                            $finalized = $this->finalize_quiz();
                         }
                         if (!$zipped && ($action == 'zip')) {
                             $zipped = $this->zip_reviews($files);
@@ -142,44 +157,46 @@ class quiz_concorsi_report extends quiz_default_report {
                     $this->print_files($finalizedfiles, 'finalizedfiles', 'quiz-finalized-files');
                 }
 
-                if ((!$zipped) && has_capability('quiz/concorsi:archivereviews', $this->context)) {
-                    echo $OUTPUT->single_button(
-                        new moodle_url('/mod/quiz/report.php', array(
-                                'id' => $cm->id,
-                                'mode' => 'concorsi',
-                                'action' => 'zip')
-                        ),
-                        get_string('zip', 'quiz_concorsi'),
-                        'post'
-                    );
-                }
-                if ($zipped && (!$finalized || $canrefinalize) && has_capability('quiz/concorsi:archivereviews', $this->context)) {
-                    $finalizestr = get_string('finalize', 'quiz_concorsi');
-                    $confirmattrs = array();
-                    if ($finalized && $canrefinalize) {
-                        $finalizestr = get_string('refinalize', 'quiz_concorsi');
-                    }
-                    if (!$finalized && !$canrefinalize) {
-                        $destination = 'javascript:document.getElementsByName("finalize")[0].parentElement.submit();';
-                        $confirmattrs = array(
-                            'name' => 'finalize',
-                            'data-modal' => 'confirmation',
-                            'data-modal-title-str' => json_encode(['finalize', 'quiz_concorsi']),
-                            'data-modal-content-str' => json_encode(['areyousure', 'quiz_concorsi']),
-                            'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
-                            'data-modal-destination' => $destination,
+                if (has_capability('quiz/concorsi:archivereviews', $this->context)) {
+                    if (!$zipped) {
+                        echo $OUTPUT->single_button(
+                            new moodle_url('/mod/quiz/report.php', array(
+                                    'id' => $cm->id,
+                                    'mode' => 'concorsi',
+                                    'action' => 'zip')
+                            ),
+                            get_string('zip', 'quiz_concorsi'),
+                            'post'
                         );
                     }
-                    echo $OUTPUT->single_button(
-                        new moodle_url('/mod/quiz/report.php', array(
-                                'id' => $cm->id,
-                                'mode' => 'concorsi',
-                                'action' => 'finalize')
-                        ),
-                        $finalizestr,
-                        'post',
-                        $confirmattrs
-                    );
+                    if ($zipped && (!$finalized || $canrefinalize)) {
+                        $finalizestr = get_string('finalize', 'quiz_concorsi');
+                        $confirmattrs = array();
+                        if ($finalized && $canrefinalize) {
+                            $finalizestr = get_string('refinalize', 'quiz_concorsi');
+                        }
+                        if (!$finalized && !$canrefinalize) {
+                            $destination = 'javascript:document.getElementsByName("finalize")[0].parentElement.submit();';
+                            $confirmattrs = array(
+                                'name' => 'finalize',
+                                'data-modal' => 'confirmation',
+                                'data-modal-title-str' => json_encode(['finalize', 'quiz_concorsi']),
+                                'data-modal-content-str' => json_encode(['areyousure', 'quiz_concorsi']),
+                                'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
+                                'data-modal-destination' => $destination,
+                            );
+                        }
+                        echo $OUTPUT->single_button(
+                            new moodle_url('/mod/quiz/report.php', array(
+                                    'id' => $cm->id,
+                                    'mode' => 'concorsi',
+                                    'action' => 'finalize')
+                            ),
+                            $finalizestr,
+                            'post',
+                            $confirmattrs
+                        );
+                    }
                 }
             }
         } else {
@@ -322,6 +339,129 @@ class quiz_concorsi_report extends quiz_default_report {
             break;
         }
         return $result;
+    }
+
+    /**
+     * Create and downlooad an Excel file with all quiz grades.
+     *
+     * @return boolean True on success and false on failure.
+     */
+    private function download_grades_file() {
+        global $CFG, $DB;
+
+        $fs = get_file_storage();
+        $xlsname = $this->get_finalized_filename('-grades.xlsx');
+
+        // Create Excel Workbook and define cell formats.
+        require_once($CFG->libdir . '/excellib.class.php');
+        $workbook = new MoodleExcelWorkbook($xlsname);
+        $myxls = $workbook->add_worksheet();
+        $format = $workbook->add_format();
+        $format->set_bold(0);
+        $formatbc = $workbook->add_format();
+        $formatbc->set_bold(1);
+        $formatbc->set_align('center');
+        $rownum = 0;
+
+        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        if (!empty($attempts)) {
+            foreach ($attempts as $attempt) {
+                // Excel row data content.
+                $row = array();
+
+                $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
+                $student = $DB->get_record('user', array('id' => $attemptobj->get_userid()));
+                $row['firstname'] = $student->firstname;
+                $row['lastname'] = $student->lastname;
+                $row['idnumber'] = $student->idnumber;
+
+                // Show marks (if the user is allowed to see marks at the moment).
+                $grade = quiz_rescale_grade($attempt->sumgrades, $this->quiz, false);
+                if (quiz_has_grades($this->quiz)) {
+                    if ($attempt->state != mod_quiz\quiz_attempt::FINISHED) {
+                        // Cannot display grade.
+                        $row['grade'] = '';
+                    } else if (is_null($grade)) {
+                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
+                    } else {
+                        // Now the scaled grade.
+                        $a = new stdClass();
+                        $a->grade = html_writer::tag('b', quiz_format_grade($this->quiz, $grade));
+                        $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->grade);
+                        if ($this->quiz->grade != 100) {
+                            $a->percent = html_writer::tag('b', format_float(
+                                $attempt->sumgrades * 100 / $this->quiz->sumgrades, 0));
+                            $formattedgrade = get_string('outofpercent', 'quiz', $a);
+                        } else {
+                            $formattedgrade = get_string('outof', 'quiz', $a);
+                        }
+                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
+                    }
+                }
+
+                $slots = $attemptobj->get_slots();
+                $maxgrades = array();
+
+                foreach ($slots as $slot) {
+                    $originalslot = $attemptobj->get_original_slot($slot);
+                    $number = $attemptobj->get_question_number($originalslot);
+
+                    $qa = $attemptobj->get_question_attempt($slot);
+
+                    if ($slot != $originalslot) {
+                        $qa->set_max_mark($attemptobj->get_question_attempt($originalslot)->get_max_mark());
+                    }
+ 
+                    if ($rownum == 0) {
+                        $maxgrades[$number] = $this->quiz->grade * $qa->get_max_mark() / $this->quiz->sumgrades;
+                    }
+
+                    $grade = '-';
+                    if (is_null($qa->get_fraction())) {
+                        if ($qa->get_state() == question_state::$needsgrading) {
+                            $grade = get_string('requiresgrading', 'question');
+                        }
+                    } else {
+                        $grade = quiz_rescale_grade($qa->get_fraction() * $qa->get_max_mark(), $this->quiz, 'question');
+                    }
+                    $row[$number] = $grade;
+                }
+
+                // Define spreadsheet column headers.
+                if ($rownum == 0) {
+                    $colnum = 0;
+                    foreach (array_keys($row) as $item) {
+                        $colstr = '';
+                        if ($item == 'marks') {
+                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->sumgrades);
+                        } else if ($item == 'grade') {
+                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->grade);
+                        } else if (is_int($item)) {
+                            $colstr = get_string('qbrief', 'quiz', $item) . '/' . quiz_format_grade($this->quiz, $maxgrades[$item]);
+                        } else {
+                            $colstr = get_string($item);
+                        }
+                        $myxls->write($rownum, $colnum, $colstr, $formatbc);
+                        $colnum++;
+                    }
+                    $rownum++;
+                }
+
+                // Insert spreadsheet values for current attempt.
+                $colnum = 0;
+                foreach ($row as $item) {
+                    $myxls->write($rownum, $colnum, $item, $format);
+                    $colnum++;
+                }
+                $rownum++;
+            }
+
+            // Close end download Excel file.
+            $workbook->close();
+
+            return true;
+        }
+        return false;
     }
 
     /**

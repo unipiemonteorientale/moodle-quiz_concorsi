@@ -31,6 +31,7 @@ $string['areyousure'] = 'Are you sure to finalize public exam reports? Finalized
 $string['finalizeconfirm'] = 'Finalize';
 $string['refinalize'] = 'Refinalize public exam reports';
 $string['zip'] = 'Compress public exam reports';
+$string['downloadgradesfile'] = 'Download grades file';
 $string['candidate'] = 'Candidate';
 $string['attemptfiles'] = 'Attempt files ({$a})';
 $string['finalizedfiles'] = 'Finalized files';

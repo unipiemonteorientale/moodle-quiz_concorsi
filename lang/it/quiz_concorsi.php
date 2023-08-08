@@ -31,6 +31,7 @@ $string['areyousure'] = 'Sei sicuro di voler finalizzare i resoconti del concors
 $string['finalizeconfirm'] = 'Finalizza';
 $string['refinalize'] = 'Rifinalizza i resoconti del concorso';
 $string['zip'] = 'Crea archivio ZIP delle prove';
+$string['downloadgradesfile'] = 'Download file valutazioni';
 $string['candidate'] = 'Candidato';
 $string['attemptfiles'] = 'File delle prove ({$a})';
 $string['finalizedfiles'] = 'File finalizzati';
