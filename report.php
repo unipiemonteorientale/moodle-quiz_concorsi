@@ -354,7 +354,6 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
     private function all_attempts_graded() {
         global $DB;
 
-error_log('ci sono');
         $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
@@ -364,7 +363,6 @@ error_log('ci sono');
                     if (!empty($slots)) {
                         foreach ($slots as $slot) {
                             $qa = $attemptobj->get_question_attempt($slot);
-error_log($qa->get_state());
                             if (is_null($qa->get_fraction())) {
                                 if ($qa->get_state() == question_state::$needsgrading) {
                                     return false;
