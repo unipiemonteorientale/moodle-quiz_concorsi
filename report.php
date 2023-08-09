@@ -356,17 +356,15 @@ class quiz_concorsi_report extends quiz_default_report {
     private function all_attempts_graded() {
         global $DB;
 
-error_log('ci sono');
         $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
                 $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
-                if ($attempt->state == mod_quiz\quiz_attempt::FINISHED) {
+                if ($attempt->state == quiz_attempt::FINISHED) {
                     $slots = $attemptobj->get_slots();
                     if (!empty($slots)) {
                         foreach ($slots as $slot) {
                             $qa = $attemptobj->get_question_attempt($slot);
-error_log($qa->get_state());
                             if (is_null($qa->get_fraction())) {
                                 if ($qa->get_state() == question_state::$needsgrading) {
                                     return false;
