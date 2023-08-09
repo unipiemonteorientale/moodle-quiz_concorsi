@@ -380,7 +380,7 @@ class quiz_concorsi_report extends quiz_default_report {
                 // Show marks (if the user is allowed to see marks at the moment).
                 $grade = quiz_rescale_grade($attempt->sumgrades, $this->quiz, false);
                 if (quiz_has_grades($this->quiz)) {
-                    if ($attempt->state != mod_quiz\quiz_attempt::FINISHED) {
+                    if ($attempt->state != quiz_attempt::FINISHED) {
                         // Cannot display grade.
                         $row['grade'] = '';
                     } else if (is_null($grade)) {
