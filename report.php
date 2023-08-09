@@ -177,16 +177,21 @@ class quiz_concorsi_report extends quiz_default_report {
                         if ($finalized && $canrefinalize) {
                             $finalizestr = get_string('refinalize', 'quiz_concorsi');
                         }
-                        if (!$finalized && !$canrefinalize) {
-                            $destination = 'javascript:document.getElementsByName("finalize")[0].parentElement.submit();';
-                            $confirmattrs = array(
-                                'name' => 'finalize',
-                                'data-modal' => 'confirmation',
-                                'data-modal-title-str' => json_encode(['finalize', 'quiz_concorsi']),
-                                'data-modal-content-str' => json_encode(['areyousure', 'quiz_concorsi']),
-                                'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
-                                'data-modal-destination' => $destination,
-                            );
+                        $destination = 'javascript:document.getElementsByName("finalize")[0].parentElement.submit();';
+                        $confirmattrs = array(
+                            'name' => 'finalize',
+                            'data-modal' => 'confirmation',
+                            'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
+                            'data-modal-destination' => $destination,
+                        );
+                        if (!$this->all_attempts_graded()) {
+                            $confirmattrs['data-modal-title-str'] = json_encode(['attention', 'quiz_concorsi']);
+                            $confirmattrs['data-modal-content-str'] = json_encode(['notallgraded', 'quiz_concorsi']);
+                        } else if (!$canrefinalize) {
+                            $confirmattrs['data-modal-title-str'] = json_encode(['finalize', 'quiz_concorsi']);
+                            $confirmattrs['data-modal-content-str'] = json_encode(['areyousure', 'quiz_concorsi']);
+                        } else {
+                            $confirmattrs = array();
                         }
                         echo $OUTPUT->single_button(
                             new moodle_url('/mod/quiz/report.php', array(
@@ -341,6 +346,38 @@ class quiz_concorsi_report extends quiz_default_report {
             break;
         }
         return $result;
+    }
+
+    /**
+     * Check that all quiz attempt questions are graded.
+     *
+     * @return boolean True on success and false on failure.
+     */
+    private function all_attempts_graded() {
+        global $DB;
+
+error_log('ci sono');
+        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        if (!empty($attempts)) {
+            foreach ($attempts as $attempt) {
+                $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
+                if ($attempt->state == mod_quiz\quiz_attempt::FINISHED) {
+                    $slots = $attemptobj->get_slots();
+                    if (!empty($slots)) {
+                        foreach ($slots as $slot) {
+                            $qa = $attemptobj->get_question_attempt($slot);
+error_log($qa->get_state());
+                            if (is_null($qa->get_fraction())) {
+                                if ($qa->get_state() == question_state::$needsgrading) {
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     /**
