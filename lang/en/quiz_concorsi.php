@@ -41,6 +41,11 @@ $string['questionnumber'] = 'Question {$a}';
 $string['filehash'] = 'File hash';
 $string['answer'] = 'Given answer';
 $string['rightanswer'] = 'Right answer';
+$string['gradedattempts'] = 'Graded attempts';
+$string['gradebook'] = 'Gradebook';
+$string['grades'] = 'Grades';
+$string['attemptsarchive'] = 'Attempts archive';
+$string['typepassword'] = 'Please enter zip file encryption password:';
 
 $string['concorsi:archivereviews'] = 'Archive quiz reviews';
 $string['concorsi:downloadreviews'] = 'Download quiz reviews';
