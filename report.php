@@ -75,7 +75,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * @throws moodle_exception
      */
     public function display($quiz, $cm, $course) {
-        global $OUTPUT;
+        global $OUTPUT, $PAGE;
 
         $this->quiz = $quiz;
         $this->cm = $cm;
@@ -129,10 +129,11 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         $finalizedfilename = $finalizedfile->get_filename();
                         if ($finalizedfilename !== '.') {
                             if (!$zipped) {
-                                $zipped = $finalizedfilename == $this->get_finalized_filename('.zip');
+                                $zipped = $finalizedfile->get_filepath() == '/attemptsarchive/';
                             }
                             if (!$finalized) {
-                                $finalized = $finalizedfilename == $this->get_finalized_filename('.pdf');
+                                $finalized = $finalizedfile->get_filepath() == '/gradedattempts/' ||
+                                             $finalizedfile->get_filepath() == '/gradebook/';
                             }
                         }
                     }
@@ -144,7 +145,8 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             $finalized = $this->finalize_quiz();
                         }
                         if (!$zipped && ($action == 'zip')) {
-                            $zipped = $this->zip_reviews($files);
+                            $archivepassword = optional_param('archivepassword', '', PARAM_RAW);
+                            $zipped = $this->zip_reviews($files, $archivepassword);
                         }
                         if (($action == 'finalize') || ($action == 'zip')) {
                             $suspened = $this->suspend_quiz_users();
@@ -159,14 +161,23 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
                 if (has_capability('quiz/concorsi:archivereviews', $this->context)) {
                     if (!$zipped) {
+                        $encryptzipfiles = get_config('theme_concorsi', 'encryptzipfiles');
+                        $actionfields = array(
+                            'id' => $cm->id,
+                            'mode' => 'concorsi',
+                            'action' => 'zip',
+                        );
+                        $actionattrs = array();
+                        if (!empty($encryptzipfiles)) {
+                            $actionfields['archivepassword'] = '';
+                            $actionattrs['data-action'] = 'quiz_concorsi/ask_zip_password';
+                        }
+
                         echo $OUTPUT->single_button(
-                            new moodle_url('/mod/quiz/report.php', array(
-                                    'id' => $cm->id,
-                                    'mode' => 'concorsi',
-                                    'action' => 'zip')
-                            ),
+                            new moodle_url('/mod/quiz/report.php', $actionfields),
                             get_string('zip', 'quiz_concorsi'),
-                            'post'
+                            'post',
+                            $actionattrs
                         );
                     }
                     if ($zipped && (!$finalized || $canrefinalize)) {
@@ -202,6 +213,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             $confirmattrs
                         );
                     }
+                    $PAGE->requires->js_call_amd('quiz_concorsi/actions', 'init');
                 }
             }
         } else {
@@ -267,12 +279,16 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * Print list of file links.
      *
      * @param string $extension Filename extension.
+     * @param string $type Finalized file type.
      *
      * @return void
      */
-    private function get_finalized_filename($extension) {
+    private function get_finalized_filename($extension, $type=null) {
         $filenameparts = array();
 
+        if (!empty($type)) {
+            $filenameparts[] = get_string($type, 'quiz_concorsi');
+        }
         $filenameparts[] = $this->course->shortname;
         $filenameparts[] = userdate($this->course->startdate, '%d-%m-%Y');
         $filenameparts[] = $this->quiz->name;
@@ -285,10 +301,13 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * Create and store a zip with files.
      *
      * @param array $files Files to print.
+     * @param string $password Zip file encryption password.
      *
      * @return boolean True on success and false on failure.
      */
-    private function zip_reviews($files) {
+    private function zip_reviews($files, $password = '') {
+        global $USER;
+
         if (!empty($files)) {
             $zipfiles = array();
             foreach ($files as $file) {
@@ -298,10 +317,44 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 }
             }
             if (!empty($zipfiles)) {
-                $zip = new zip_packer();
-                $zipfilename = $this->get_finalized_filename('.zip');
-                if ($zip->archive_to_storage($zipfiles, $this->context->id, $this->component, $this->finalizedarea,
-                                         $this->quiz->id, '/', $zipfilename) !== false) {
+                $tempdir = make_temp_directory('quiz_concorsi' . DIRECTORY_SEPARATOR . $this->quiz->id . '-' . $USER->id);
+                $zipfilepath = $tempdir . DIRECTORY_SEPARATOR . 'tempzip.zip';
+
+                // Create zip file in a temporary directory.
+                $zip = new ZipArchive();
+                if ($zip->open($zipfilepath, ZipArchive::CREATE) === true) {
+                    if (!empty($password)) {
+                        $zip->setPassword($password);
+                    }
+                    foreach ($zipfiles as $filename => $file) {
+                        $filepath = $tempdir . DIRECTORY_SEPARATOR . $filename;
+                        $file->copy_content_to($filepath);
+                        $zip->addFile($filepath, $filename);
+                        if (!empty($password)) {
+                           $zip->setEncryptionName($filename, ZipArchive::EM_AES_256);
+                        }
+                    }
+                    $zip->close();
+                    
+                    // Store zip file in Moodle filesystem.
+                    $fs = get_file_storage();
+                    $zipfileinfo = [
+                        'contextid' => $this->context->id,
+                        'component' => $this->component,
+                        'filearea' =>  $this->finalizedarea,
+                        'itemid' => $this->quiz->id,
+                        'filepath' => '/attemptsarchive/',
+                        'filename' => $this->get_finalized_filename('.zip', 'attemptsarchive'),
+                    ];
+                    $fs->create_file_from_pathname($zipfileinfo, $zipfilepath);
+
+                    // Cleanup temporary file and directory.
+                    foreach ($zipfiles as $filename => $file) {
+                        $filepath = $tempdir . DIRECTORY_SEPARATOR . $filename;
+                        unlink($filepath);
+                    }
+                    unlink($zipfilepath);
+                    rmdir($tempdir);
                     return true;
                 }
             }
@@ -385,7 +438,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         global $CFG, $DB;
 
         $fs = get_file_storage();
-        $xlsname = $this->get_finalized_filename('-grades.xlsx');
+        $xlsname = $this->get_finalized_filename('.xlsx', 'grades');
 
         // Create Excel Workbook and define cell formats.
         require_once($CFG->libdir . '/excellib.class.php');
@@ -511,24 +564,26 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         $nowstr = userdate(time(), '%F-%T');
 
-        $pdfname = $this->get_finalized_filename('.pdf');
+        $pdfname = $this->get_finalized_filename('.pdf', 'gradedattempts');
         $fs = get_file_storage();
-        $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $pdfname);
+        $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, 
+                                 $this->quiz->id, '/gradedattempts/', $pdfname);
         if (!empty($pdffile)) {
             if (!$canrefinalize) {
                 return false;
             } else {
-                $pdfname = $this->get_finalized_filename('-' . $nowstr . '.pdf');
+                $pdfname = $this->get_finalized_filename('-' . $nowstr . '.pdf', 'gradedattempts');
             }
         }
 
-        $xlsname = $this->get_finalized_filename('.xlsx');
-        $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $xlsname);
+        $xlsname = $this->get_finalized_filename('.xlsx', 'gradebook');
+        $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, 
+                                 $this->quiz->id, '/gradebook/', $xlsname);
         if (!empty($xlsfile)) {
             if (!$canrefinalize) {
                 return false;
             } else {
-                $xlsname = $this->get_finalized_filename('-' . $nowstr . '.xlsx');
+                $xlsname = $this->get_finalized_filename('-' . $nowstr . '.xlsx', 'gradebook');
             }
         }
 
@@ -748,8 +803,8 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
             $doc->lastPage();
             $doc->Output($pdftempfilepath, 'F');
 
-            if ($this->store_finalized_file($pdfname, $pdftempfilepath) &&
-                    $this->store_finalized_file($xlsname, $xlstempfilepath)) {
+            if ($this->store_finalized_file($pdfname, $pdftempfilepath, 'gradedattempts') &&
+                    $this->store_finalized_file($xlsname, $xlstempfilepath, 'gradebook')) {
                 return true;
             }
         }
@@ -760,26 +815,30 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * Store file finalized file into Moodle filesystem.
      *
      * @param  string $filename The filename to store.
-     * @param  string $filepath The filepath where the temporary file is stored.
+     * @param  string $temppath The file path where the temporary file is stored.
+     * @param  string $filetype The type of the file to store.
      *
      * @return boolean True on success and false on failure.
      */
-    private function store_finalized_file($filename, $filepath) {
-        if (!empty($filepath) && file_exists($filepath)) {
+    private function store_finalized_file($filename, $temppath, $filetype = '') {
+        if (!empty($temppath) && file_exists($temppath)) {
+            $filepath = !empty($filetype) ? '/' . $filetype . '/' : '/';
+
             $fileinfo = [
                 'contextid' => $this->context->id,
                 'component' => $this->component,
                 'filearea' => $this->finalizedarea,
                 'itemid' => $this->quiz->id,
-                'filepath' => '/',
+                'filepath' => $filepath,
                 'filename' => $filename,
             ];
 
             $fs = get_file_storage();
-            $fs->create_file_from_pathname($fileinfo, $filepath);
-            unlink($filepath);
+            $fs->create_file_from_pathname($fileinfo, $temppath);
+            unlink($temppath);
 
-            $file = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, $this->quiz->id, '/', $filename);
+            $file = $fs->get_file($this->context->id, $this->component, $this->finalizedarea,
+                                  $this->quiz->id, $filepath, $filename);
             if (!empty($file)) {
                 return true;
             }

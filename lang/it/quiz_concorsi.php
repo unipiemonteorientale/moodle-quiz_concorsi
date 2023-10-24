@@ -41,6 +41,11 @@ $string['questionnumber'] = 'Domanda {$a}';
 $string['filehash'] = 'Hash del file della prova';
 $string['answer'] = 'Risposta data';
 $string['rightanswer'] = 'Risposta esatta';
+$string['gradedattempts'] = 'Prove valutate';
+$string['gradebook'] = 'Valutazioni finali';
+$string['grades'] = 'Valutazioni';
+$string['attemptsarchive'] = 'Archivio prove';
+$string['typepassword'] = 'Inserire la password per proteggere il file zip:';
 
 $string['concorsi:archivereviews'] = 'Archivia resoconti del concorso';
 $string['concorsi:downloadreviews'] = 'Download resoconti del concorso';
