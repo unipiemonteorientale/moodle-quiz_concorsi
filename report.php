@@ -731,36 +731,38 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     }
                     $displayoptions = $attemptobj->get_display_options(true);
 
-                    $content .= html_writer::tag('<h2>', get_string('questionnumber', 'quiz_concorsi', $number));
-                    $content .= html_writer::tag('<pre>', rtrim($qa->get_question_summary()));
-                    $content .= html_writer::tag('<h3>', get_string('answer', 'quiz_concorsi'));
-                    $content .= html_writer::tag('<pre>', rtrim($qa->get_response_summary()));
+                    $content .= html_writer::tag('h2', get_string('questionnumber', 'quiz_concorsi', $number));
+                    $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_question_summary()));
+                    $content .= html_writer::tag('h3', get_string('answer', 'quiz_concorsi'));
+                    $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_response_summary()));
 
                     if (is_null($qa->get_fraction())) {
                         $mark = $qa->format_max_mark($displayoptions->markdp);
-                        $content .= html_writer::tag('<p>', get_string('markedoutofmax', 'question', $mark));
+                        $content .= html_writer::tag('p', get_string('markedoutofmax', 'question', $mark));
                     } else {
                         $grade = new stdClass();
                         $grade->mark = $qa->format_mark($displayoptions->markdp);
                         $grade->max = $qa->format_max_mark($displayoptions->markdp);
-                        $content .= html_writer::tag('<p>', get_string('markoutofmax', 'question', $grade));
+                        $content .= html_writer::tag('p', get_string('markoutofmax', 'question', $grade));
                     }
 
                     $rightanswer = rtrim($qa->get_right_answer_summary());
                     if (!empty($rightanswer)) {
-                        $content .= html_writer::tag('<h3>', get_string('rightanswer', 'quiz_concorsi'));
-                        $content .= html_writer::tag('<pre>', $rightanswer);
+                        $content .= html_writer::tag('h3', get_string('rightanswer', 'quiz_concorsi'));
+                        $content .= html_writer::tag('pre', $rightanswer);
+                        $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $rightanswer));
                     }
 
                     $manualcomment = $qa->get_current_manual_comment();
                     if (!empty($manualcomment[0])) {
-                        $content .= html_writer::tag('<h3>', get_string('comment', 'question'));
+                        $content .= html_writer::tag('h3', get_string('comment', 'question'));
                         $comment = $manualcomment[0];
                         $commentformat = $manualcomment[1];
-                        html_writer::tag('<pre>', rtrim($qa->get_question()->html_to_text($coment, $commentformat)));
+                        $commenttext = $qa->get_question()->html_to_text($coment, $commentformat);
+                        $content .= html_writer::tag('<pre>', str_replace(['<', '>'], ['&lt;', '&gt;'], $commenttext));
                     }
 
-                    $content .= html_writer::empty_tag('<hr>', array());
+                    $content .= html_writer::empty_tag('hr', []);
 
                 }
 
