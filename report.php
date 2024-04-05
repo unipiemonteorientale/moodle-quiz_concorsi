@@ -103,10 +103,11 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $this->print_header_and_tabs($cm, $course, $quiz, 'concorsi');
 
         echo $OUTPUT->single_button(
-            new moodle_url('/mod/quiz/report.php', array(
+            new moodle_url('/mod/quiz/report.php', [
                     'id' => $cm->id,
                     'mode' => 'concorsi',
-                    'action' => 'downloadgrades')
+                    'action' => 'downloadgrades',
+                ]
             ),
             get_string('downloadgradesfile', 'quiz_concorsi'),
             'post'
@@ -162,12 +163,12 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 if (has_capability('quiz/concorsi:archivereviews', $this->context)) {
                     if (!$zipped) {
                         $encryptzipfiles = get_config('theme_concorsi', 'encryptzipfiles');
-                        $actionfields = array(
+                        $actionfields = [
                             'id' => $cm->id,
                             'mode' => 'concorsi',
                             'action' => 'zip',
-                        );
-                        $actionattrs = array();
+                        ];
+                        $actionattrs = [];
                         if (!empty($encryptzipfiles)) {
                             $actionfields['archivepassword'] = '';
                             $actionattrs['data-action'] = 'quiz_concorsi/ask_zip_password';
@@ -182,17 +183,17 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     }
                     if ($zipped && (!$finalized || $canrefinalize)) {
                         $finalizestr = get_string('finalize', 'quiz_concorsi');
-                        $confirmattrs = array();
+                        $confirmattrs = [];
                         if ($finalized && $canrefinalize) {
                             $finalizestr = get_string('refinalize', 'quiz_concorsi');
                         }
                         $destination = 'javascript:document.getElementsByName("finalize")[0].parentElement.submit();';
-                        $confirmattrs = array(
+                        $confirmattrs = [
                             'name' => 'finalize',
                             'data-modal' => 'confirmation',
                             'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
                             'data-modal-destination' => $destination,
-                        );
+                        ];
                         if (!$this->all_attempts_graded()) {
                             $confirmattrs['data-modal-title-str'] = json_encode(['attention', 'quiz_concorsi']);
                             $confirmattrs['data-modal-content-str'] = json_encode(['notallgraded', 'quiz_concorsi']);
@@ -200,13 +201,14 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             $confirmattrs['data-modal-title-str'] = json_encode(['finalize', 'quiz_concorsi']);
                             $confirmattrs['data-modal-content-str'] = json_encode(['areyousure', 'quiz_concorsi']);
                         } else {
-                            $confirmattrs = array();
+                            $confirmattrs = [];
                         }
                         echo $OUTPUT->single_button(
-                            new moodle_url('/mod/quiz/report.php', array(
+                            new moodle_url('/mod/quiz/report.php', [
                                     'id' => $cm->id,
                                     'mode' => 'concorsi',
-                                    'action' => 'finalize')
+                                    'action' => 'finalize',
+                                ]
                             ),
                             $finalizestr,
                             'post',
@@ -229,7 +231,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      */
     protected function base_url() {
         return new moodle_url('/mod/quiz/report.php',
-            array('id' => $this->cm->id, 'mode' => 'concorsi'));
+            ['id' => $this->cm->id, 'mode' => 'concorsi']);
     }
 
     /**
@@ -258,7 +260,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         $filename,
                         true
                     );
-                    $downloadlink = html_writer::tag('a', $filename, array('href' => $urldownload));
+                    $downloadlink = html_writer::tag('a', $filename, ['href' => $urldownload]);
                     $filelist .= html_writer::tag('li', $downloadlink);
                 } else {
                     $filelist .= html_writer::tag('li', $filename);
@@ -267,11 +269,11 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
             }
         }
         if ($count > 0) {
-            $content = html_writer::tag('h3', get_string($langstr, 'quiz_concorsi', $count), array('class' => $class . '-title'));
-            $content .= html_writer::start_tag('ul', array('class' => $class . '-list'));
+            $content = html_writer::tag('h3', get_string($langstr, 'quiz_concorsi', $count), ['class' => $class . '-title']);
+            $content .= html_writer::start_tag('ul', ['class' => $class . '-list']);
             $content .= $filelist;
             $content .= html_writer::end_tag('ul');
-            echo html_writer::tag('div', $content, array('class' => $class));
+            echo html_writer::tag('div', $content, ['class' => $class]);
         }
     }
 
@@ -284,7 +286,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * @return void
      */
     private function get_finalized_filename($extension, $type=null) {
-        $filenameparts = array();
+        $filenameparts = [];
 
         if (!empty($type)) {
             $filenameparts[] = get_string($type, 'quiz_concorsi');
@@ -309,7 +311,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         global $USER;
 
         if (!empty($files)) {
-            $zipfiles = array();
+            $zipfiles = [];
             foreach ($files as $file) {
                 $filename = $file->get_filename();
                 if ($filename != '.' && !$file->is_directory()) {
@@ -331,17 +333,17 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         $file->copy_content_to($filepath);
                         $zip->addFile($filepath, $filename);
                         if (!empty($password)) {
-                           $zip->setEncryptionName($filename, ZipArchive::EM_AES_256);
+                            $zip->setEncryptionName($filename, ZipArchive::EM_AES_256);
                         }
                     }
                     $zip->close();
-                    
+
                     // Store zip file in Moodle filesystem.
                     $fs = get_file_storage();
                     $zipfileinfo = [
                         'contextid' => $this->context->id,
                         'component' => $this->component,
-                        'filearea' =>  $this->finalizedarea,
+                        'filearea' => $this->finalizedarea,
                         'itemid' => $this->quiz->id,
                         'filepath' => '/attemptsarchive/',
                         'filename' => $this->get_finalized_filename('.zip', 'attemptsarchive'),
@@ -376,12 +378,12 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         switch ($suspendmode) {
             case ATTEMPTED:
-                $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+                $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
 
                 if (!empty($attempts)) {
                     foreach ($attempts as $attempt) {
                         $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
-                        $result = $result && $DB->set_field('user', 'suspended', 1, array('id' => $attemptobj->get_userid()));
+                        $result = $result && $DB->set_field('user', 'suspended', 1, ['id' => $attemptobj->get_userid()]);
                     }
                 }
             break;
@@ -390,7 +392,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 if (!empty($students)) {
                     foreach ($students as $student) {
                         if ($student->suspended == 0) {
-                            $result = $result && $DB->set_field('user', 'suspended', 1, array('id' => $student->id));
+                            $result = $result && $DB->set_field('user', 'suspended', 1, ['id' => $student->id]);
                         }
                     }
                 }
@@ -407,7 +409,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
     private function all_attempts_graded() {
         global $DB;
 
-        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
                 $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
@@ -451,14 +453,14 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $formatbc->set_align('center');
         $rownum = 0;
 
-        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
                 // Excel row data content.
-                $row = array();
+                $row = [];
 
                 $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
-                $student = $DB->get_record('user', array('id' => $attemptobj->get_userid()));
+                $student = $DB->get_record('user', ['id' => $attemptobj->get_userid()]);
                 $row['firstname'] = $student->firstname;
                 $row['lastname'] = $student->lastname;
                 $row['idnumber'] = $student->idnumber;
@@ -488,7 +490,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 }
 
                 $slots = $attemptobj->get_slots();
-                $maxgrades = array();
+                $maxgrades = [];
 
                 foreach ($slots as $slot) {
                     $originalslot = $attemptobj->get_original_slot($slot);
@@ -499,7 +501,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     if ($slot != $originalslot) {
                         $qa->set_max_mark($attemptobj->get_question_attempt($originalslot)->get_max_mark());
                     }
- 
+
                     if ($rownum == 0) {
                         $maxgrades[$number] = $this->quiz->grade * $qa->get_max_mark() / $this->quiz->sumgrades;
                     }
@@ -566,7 +568,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         $pdfname = $this->get_finalized_filename('.pdf', 'gradedattempts');
         $fs = get_file_storage();
-        $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, 
+        $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea,
                                  $this->quiz->id, '/gradedattempts/', $pdfname);
         if (!empty($pdffile)) {
             if (!$canrefinalize) {
@@ -577,7 +579,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         }
 
         $xlsname = $this->get_finalized_filename('.xlsx', 'gradebook');
-        $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea, 
+        $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea,
                                  $this->quiz->id, '/gradebook/', $xlsname);
         if (!empty($xlsfile)) {
             if (!$canrefinalize) {
@@ -607,42 +609,42 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $doc->SetAutoPageBreak(true, PDF_MARGIN_BOTTOM);
         $quizdata = $this->get_finalized_filename('') . '-' . $nowstr;
         $doc->SetHeaderData(null, null, null, $quizdata);
-        $doc->SetFooterData(array(0, 0, 0), array(0, 0, 0));
+        $doc->SetFooterData([0, 0, 0], [0, 0, 0]);
 
         $doc->SetTopMargin(18);
         $doc->SetHeaderMargin(PDF_MARGIN_HEADER);
         $doc->SetFooterMargin(PDF_MARGIN_FOOTER);
 
-        $attempts = $DB->get_records('quiz_attempts', array('quiz' => $this->quiz->id, 'preview' => 0));
+        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
                 // PDF data content.
                 $content = '';
 
                 // Excel row data content.
-                $row = array();
+                $row = [];
 
                 $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
-                $student = $DB->get_record('user', array('id' => $attemptobj->get_userid()));
+                $student = $DB->get_record('user', ['id' => $attemptobj->get_userid()]);
 
-                $summarydata = array();
-                $summarydata['user'] = array();
+                $summarydata = [];
+                $summarydata['user'] = [];
                 $summarydata['user']['title'] = get_string('candidate', 'quiz_concorsi');
                 $summarydata['user']['content'] = fullname($student, true);
                 $row['lastname'] = '';
                 $row['firstname'] = '';
 
-                $summarydata['username'] = array();
+                $summarydata['username'] = [];
                 $summarydata['username']['title'] = get_string('username');
                 $summarydata['username']['content'] = $student->username;
                 $row['username'] = $student->username;
 
-                $summarydata['idnumber'] = array();
+                $summarydata['idnumber'] = [];
                 $summarydata['idnumber']['title'] = get_string('idnumber');
                 $summarydata['idnumber']['content'] = $student->idnumber;
                 $row['idnumber'] = $student->idnumber;
 
-                $summarydata['filehash'] = array();
+                $summarydata['filehash'] = [];
                 $summarydata['filehash']['title'] = get_string('filehash', 'quiz_concorsi');
                 $idnumber = str_pad($student->idnumber, 6, '0', STR_PAD_LEFT);
                 $filename = clean_param(fullname($student) . '-' . $idnumber . '.pdf', PARAM_FILE);
@@ -668,10 +670,10 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         // Cannot display grade.
                         echo '';
                     } else if (is_null($grade)) {
-                        $summarydata['grade'] = array(
+                        $summarydata['grade'] = [
                             'title' => get_string('grade', 'quiz'),
                             'content' => quiz_format_grade($this->quiz, $grade),
-                        );
+                        ];
                         $row['grade'] = quiz_format_grade($this->quiz, $grade);
 
                     } else {
@@ -680,10 +682,10 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             $a = new stdClass();
                             $a->grade = quiz_format_grade($this->quiz, $attempt->sumgrades);
                             $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->sumgrades);
-                            $summarydata['marks'] = array(
+                            $summarydata['marks'] = [
                                 'title' => get_string('marks', 'quiz'),
                                 'content' => get_string('outofshort', 'quiz', $a),
-                            );
+                            ];
                             $row['marks'] = quiz_format_grade($this->quiz, $attempt->sumgrades);
                         }
 
@@ -698,10 +700,10 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         } else {
                             $formattedgrade = get_string('outof', 'quiz', $a);
                         }
-                        $summarydata['grade'] = array(
+                        $summarydata['grade'] = [
                             'title' => get_string('grade', 'quiz'),
                             'content' => $formattedgrade,
-                        );
+                        ];
                         $row['grade'] = quiz_format_grade($this->quiz, $grade);
                     }
                 }
@@ -709,10 +711,10 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 // Feedback if there is any, and the user is allowed to see it now.
                 $feedback = $attemptobj->get_overall_feedback($grade);
                 if ($feedback) {
-                    $summarydata['feedback'] = array(
+                    $summarydata['feedback'] = [
                         'title' => get_string('feedback', 'quiz'),
                         'content' => $feedback,
-                    );
+                    ];
                 }
 
                 $renderer = $PAGE->get_renderer('mod_quiz');

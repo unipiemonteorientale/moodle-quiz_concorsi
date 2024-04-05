@@ -42,7 +42,7 @@ function quiz_concorsi_pluginfile($course, $cm, $context, string $filearea, arra
         return false;
     }
 
-    if (!in_array($filearea, array('quiz_reviews', 'finalized'))) {
+    if (!in_array($filearea, ['quiz_reviews', 'finalized'])) {
         return false;
     }
 
@@ -54,7 +54,7 @@ function quiz_concorsi_pluginfile($course, $cm, $context, string $filearea, arra
 
     $itemid = array_shift($args);
 
-    if (in_array($filearea, array('quiz_reviews', 'finalized'))) {
+    if (in_array($filearea, ['quiz_reviews', 'finalized'])) {
         if ($cm->instance !== $itemid) {
             return false;
         }

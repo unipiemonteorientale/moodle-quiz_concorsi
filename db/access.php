@@ -25,24 +25,24 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$capabilities = array(
+$capabilities = [
     // Is the user allowed to download quiz reviews.
-    'quiz/concorsi:downloadreviews' => array(
+    'quiz/concorsi:downloadreviews' => [
         'captype' => 'read',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
+        'legacy' => [
             'teacher' => CAP_ALLOW,
-            'editingteacher' => CAP_ALLOW
-        ),
-        'clonepermissionsfrom' => 'mod/quiz:viewreports'
-    ),
+            'editingteacher' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'mod/quiz:viewreports',
+    ],
 
-    'quiz/concorsi:archivereviews' => array(
+    'quiz/concorsi:archivereviews' => [
         'captype' => 'write',
         'contextlevel' => CONTEXT_MODULE,
-        'legacy' => array(
-            'editingteacher' => CAP_ALLOW
-        ),
-        'clonepermissionsfrom' => 'mod/quiz:viewreports'
-    )
-);
+        'legacy' => [
+            'editingteacher' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'mod/quiz:viewreports',
+    ],
+];

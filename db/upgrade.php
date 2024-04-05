@@ -32,7 +32,7 @@ function xmldb_quiz_concorsi_upgrade($oldversion) {
     global $DB;
 
     if ($oldversion < 2023102400) {
-        $query = array('component' => 'quiz_concorsi', 'filearea' => 'finalized', 'filepath' => '/');
+        $query = ['component' => 'quiz_concorsi', 'filearea' => 'finalized', 'filepath' => '/'];
         $filerecords = $DB->get_records('files', $query);
         if (!empty($filerecords)) {
             $fs = get_file_storage();

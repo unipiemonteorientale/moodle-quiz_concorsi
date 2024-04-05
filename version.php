@@ -30,6 +30,6 @@ $plugin->requires = 2023042400;
 $plugin->component = 'quiz_concorsi';
 $plugin->maturity = MATURITY_STABLE;
 $plugin->release = '1.1';
-$plugin->dependencies = array(
-    'theme_concorsi' => 2023021500
-);
+$plugin->dependencies = [
+    'theme_concorsi' => 2023021500,
+];
