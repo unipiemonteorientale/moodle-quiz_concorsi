@@ -27,7 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/phpspreadsheet/vendor/autoload.php");
 
-use \PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 require_once($CFG->libdir . '/excellib.class.php');
 
