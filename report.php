@@ -114,7 +114,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 'post'
             );
 
-            $itemid = $this->quiz->id;
+            $itemid = $quiz->id;
 
             $fs = get_file_storage();
             $files = $fs->get_area_files($this->context->id, $this->component, $this->reviewarea, $itemid);
@@ -442,6 +442,8 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
     private function download_grades_file() {
         global $CFG, $DB;
 
+        $quiz = $this->quiz;
+
         $fs = get_file_storage();
         $xlsname = $this->get_finalized_filename('.xlsx', 'grades');
 
@@ -454,9 +456,34 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $formatbc = $workbook->add_format();
         $formatbc->set_bold(1);
         $formatbc->set_align('center');
-        $rownum = 0;
 
-        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
+        // Load the required questions.
+        $questions = quiz_report_get_significant_questions($quiz);
+
+        // Define spreadsheet column headers.
+        $colnum = 0;
+        $myxls->write(0, $colnum, get_string('firstname'), $format);
+        $colnum++;
+        $myxls->write(0, $colnum, get_string('lastname'), $format);
+        $colnum++;
+        $myxls->write(0, $colnum, get_string('idnumber'), $format);
+        $colnum++;
+        // Show raw marks only if they are different from the grade (like on the view page).
+        if ($quiz->grade != $quiz->sumgrades) {
+            $myxls->write(0, $colnum, get_string('marks', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->sumgrades), $format);
+            $colnum++;
+        }
+        $myxls->write(0, $colnum, get_string('grade', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->grade), $format);
+        $colnum++;
+        foreach ($questions as $slot => $question) {
+            $item = get_string('qbrief', 'quiz', $question->number);
+            $item .= '/' . quiz_rescale_grade($question->maxmark, $quiz, 'question');
+            $myxls->write(0, $colnum, $item, $format);
+            $colnum++;
+        }
+
+        $rownum = 1;
+        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $quiz->id, 'preview' => 0]);
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
                 // Excel row data content.
@@ -469,45 +496,44 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 $row['idnumber'] = $student->idnumber;
 
                 // Show marks (if the user is allowed to see marks at the moment).
-                $grade = quiz_rescale_grade($attempt->sumgrades, $this->quiz, false);
-                if (quiz_has_grades($this->quiz)) {
+                $grade = quiz_rescale_grade($attempt->sumgrades, $quiz, false);
+                if (quiz_has_grades($quiz)) {
                     if ($attempt->state != mod_quiz\quiz_attempt::FINISHED) {
                         // Cannot display grade.
+                        if ($quiz->grade != $quiz->sumgrades) {
+                            $row['marks'] = '';
+                        }
                         $row['grade'] = '';
                     } else if (is_null($grade)) {
-                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
+                        // Show raw marks only if they are different from the grade (like on the view page).
+                        if ($quiz->grade != $quiz->sumgrades) {
+                            $row['marks'] = quiz_format_grade($quiz, $attempt->sumgrades);
+                        }
+                        $row['grade'] = quiz_format_grade($quiz, $grade);
                     } else {
+                        // Show raw marks only if they are different from the grade (like on the view page).
+                        if ($quiz->grade != $quiz->sumgrades) {
+                            $row['marks'] = quiz_format_grade($quiz, $attempt->sumgrades);
+                        }
                         // Now the scaled grade.
                         $a = new stdClass();
-                        $a->grade = html_writer::tag('b', quiz_format_grade($this->quiz, $grade));
-                        $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->grade);
-                        if ($this->quiz->grade != 100) {
+                        $a->grade = html_writer::tag('b', quiz_format_grade($quiz, $grade));
+                        $a->maxgrade = quiz_format_grade($quiz, $quiz->grade);
+                        if ($quiz->grade != 100) {
                             $a->percent = html_writer::tag('b', format_float(
-                                $attempt->sumgrades * 100 / $this->quiz->sumgrades, 0));
+                                $attempt->sumgrades * 100 / $quiz->sumgrades, 0));
                             $formattedgrade = get_string('outofpercent', 'quiz', $a);
                         } else {
                             $formattedgrade = get_string('outof', 'quiz', $a);
                         }
-                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
+                        $row['grade'] = quiz_format_grade($quiz, $grade);
                     }
                 }
 
-                $slots = $attemptobj->get_slots();
-                $maxgrades = [];
-
-                foreach ($slots as $slot) {
-                    $originalslot = $attemptobj->get_original_slot($slot);
-                    $number = $attemptobj->get_question_number($originalslot);
+                foreach ($questions as $slot => $question) {
+                    $number = $question->number;
 
                     $qa = $attemptobj->get_question_attempt($slot);
-
-                    if ($slot != $originalslot) {
-                        $qa->set_max_mark($attemptobj->get_question_attempt($originalslot)->get_max_mark());
-                    }
-
-                    if ($rownum == 0) {
-                        $maxgrades[$number] = $this->quiz->grade * $qa->get_max_mark() / $this->quiz->sumgrades;
-                    }
 
                     $grade = '-';
                     if (is_null($qa->get_fraction())) {
@@ -515,29 +541,9 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             $grade = get_string('requiresgrading', 'question');
                         }
                     } else {
-                        $grade = quiz_rescale_grade($qa->get_fraction() * $qa->get_max_mark(), $this->quiz, 'question');
+                        $grade = quiz_rescale_grade($qa->get_fraction() * $qa->get_max_mark(), $quiz, 'question');
                     }
                     $row[$number] = $grade;
-                }
-
-                // Define spreadsheet column headers.
-                if ($rownum == 0) {
-                    $colnum = 0;
-                    foreach (array_keys($row) as $item) {
-                        $colstr = '';
-                        if ($item == 'marks') {
-                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->sumgrades);
-                        } else if ($item == 'grade') {
-                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->grade);
-                        } else if (is_int($item)) {
-                            $colstr = get_string('qbrief', 'quiz', $item) . '/' . quiz_format_grade($this->quiz, $maxgrades[$item]);
-                        } else {
-                            $colstr = get_string($item);
-                        }
-                        $myxls->write($rownum, $colnum, $colstr, $formatbc);
-                        $colnum++;
-                    }
-                    $rownum++;
                 }
 
                 // Insert spreadsheet values for current attempt.
@@ -565,6 +571,8 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
     private function finalize_quiz() {
         global $CFG, $DB, $PAGE;
 
+        $quiz = $this->quiz;
+
         $canrefinalize = get_config('theme_concorsi', 'allowrefinalize');
 
         $nowstr = userdate(time(), '%F-%T');
@@ -572,7 +580,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $pdfname = $this->get_finalized_filename('.pdf', 'gradedattempts');
         $fs = get_file_storage();
         $pdffile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea,
-                                 $this->quiz->id, '/gradedattempts/', $pdfname);
+                                 $quiz->id, '/gradedattempts/', $pdfname);
         if (!empty($pdffile)) {
             if (!$canrefinalize) {
                 return false;
@@ -583,7 +591,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         $xlsname = $this->get_finalized_filename('.xlsx', 'gradebook');
         $xlsfile = $fs->get_file($this->context->id, $this->component, $this->finalizedarea,
-                                 $this->quiz->id, '/gradebook/', $xlsname);
+                                 $quiz->id, '/gradebook/', $xlsname);
         if (!empty($xlsfile)) {
             if (!$canrefinalize) {
                 return false;
@@ -618,7 +626,10 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $doc->SetHeaderMargin(PDF_MARGIN_HEADER);
         $doc->SetFooterMargin(PDF_MARGIN_FOOTER);
 
-        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
+        // Load the required questions.
+        $questions = quiz_report_get_significant_questions($quiz);
+
+        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $quiz->id, 'preview' => 0]);
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
                 // PDF data content.
@@ -652,12 +663,12 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 $idnumber = str_pad($student->idnumber, 6, '0', STR_PAD_LEFT);
                 $filename = clean_param(fullname($student) . '-' . $idnumber . '.pdf', PARAM_FILE);
                 $filehash = '';
-                $file = $fs->get_file($this->context->id, $this->component, $this->reviewarea, $this->quiz->id, '/', $filename);
+                $file = $fs->get_file($this->context->id, $this->component, $this->reviewarea, $quiz->id, '/', $filename);
                 if (!empty($file)) {
                     $filehash = $file->get_contenthash();
                 } else {
                     $filename = clean_param(fullname($USER) . '-' . $idnumber . '-' . $attempt->id . '.pdf', PARAM_FILE);
-                    $file = $fs->get_file($this->context->id, $this->component, $this->reviewarea, $this->quiz->id, '/', $filename);
+                    $file = $fs->get_file($this->context->id, $this->component, $this->reviewarea, $quiz->id, '/', $filename);
                     if (!empty($file)) {
                         $filehash = $file->get_contenthash();
                     }
@@ -666,8 +677,8 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 $row['filehash'] = $filehash;
 
                 // Show marks (if the user is allowed to see marks at the moment).
-                $grade = quiz_rescale_grade($attempt->sumgrades, $this->quiz, false);
-                if (quiz_has_grades($this->quiz)) {
+                $grade = quiz_rescale_grade($attempt->sumgrades, $quiz, false);
+                if (quiz_has_grades($quiz)) {
 
                     if ($attempt->state != quiz_attempt::FINISHED) {
                         // Cannot display grade.
@@ -675,30 +686,30 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     } else if (is_null($grade)) {
                         $summarydata['grade'] = [
                             'title' => get_string('grade', 'quiz'),
-                            'content' => quiz_format_grade($this->quiz, $grade),
+                            'content' => quiz_format_grade($quiz, $grade),
                         ];
-                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
+                        $row['grade'] = quiz_format_grade($quiz, $grade);
 
                     } else {
                         // Show raw marks only if they are different from the grade (like on the view page).
-                        if ($this->quiz->grade != $this->quiz->sumgrades) {
+                        if ($quiz->grade != $quiz->sumgrades) {
                             $a = new stdClass();
-                            $a->grade = quiz_format_grade($this->quiz, $attempt->sumgrades);
-                            $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->sumgrades);
+                            $a->grade = quiz_format_grade($quiz, $attempt->sumgrades);
+                            $a->maxgrade = quiz_format_grade($quiz, $quiz->sumgrades);
                             $summarydata['marks'] = [
                                 'title' => get_string('marks', 'quiz'),
                                 'content' => get_string('outofshort', 'quiz', $a),
                             ];
-                            $row['marks'] = quiz_format_grade($this->quiz, $attempt->sumgrades);
+                            $row['marks'] = quiz_format_grade($quiz, $attempt->sumgrades);
                         }
 
                         // Now the scaled grade.
                         $a = new stdClass();
-                        $a->grade = html_writer::tag('b', quiz_format_grade($this->quiz, $grade));
-                        $a->maxgrade = quiz_format_grade($this->quiz, $this->quiz->grade);
-                        if ($this->quiz->grade != 100) {
+                        $a->grade = html_writer::tag('b', quiz_format_grade($quiz, $grade));
+                        $a->maxgrade = quiz_format_grade($quiz, $quiz->grade);
+                        if ($quiz->grade != 100) {
                             $a->percent = html_writer::tag('b', format_float(
-                                $attempt->sumgrades * 100 / $this->quiz->sumgrades, 0));
+                                $attempt->sumgrades * 100 / $quiz->sumgrades, 0));
                             $formattedgrade = get_string('outofpercent', 'quiz', $a);
                         } else {
                             $formattedgrade = get_string('outof', 'quiz', $a);
@@ -707,7 +718,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             'title' => get_string('grade', 'quiz'),
                             'content' => $formattedgrade,
                         ];
-                        $row['grade'] = quiz_format_grade($this->quiz, $grade);
+                        $row['grade'] = quiz_format_grade($quiz, $grade);
                     }
                 }
 
@@ -769,26 +780,6 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
                     $content .= html_writer::empty_tag('hr', []);
 
-                }
-
-                // Define spreadsheet column headers.
-                if ($rownum == 0) {
-                    $colnum = 0;
-                    foreach (array_keys($row) as $item) {
-                        $colstr = '';
-                        if ($item == 'marks') {
-                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->sumgrades);
-                        } else if ($item == 'grade') {
-                            $colstr = get_string($item, 'quiz') . '/' . quiz_format_grade($this->quiz, $this->quiz->grade);
-                        } else if ($item == 'filehash') {
-                            $colstr = get_string('filehash', 'quiz_concorsi');
-                        } else {
-                            $colstr = get_string($item);
-                        }
-                        $myxls->write($rownum, $colnum, $colstr, $formatbc);
-                        $colnum++;
-                    }
-                    $rownum++;
                 }
 
                 // Insert spreadsheet values for current attempt.
