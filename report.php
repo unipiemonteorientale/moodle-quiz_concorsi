@@ -102,18 +102,18 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         // Start output.
         $this->print_header_and_tabs($cm, $course, $quiz, 'concorsi');
 
-        echo $OUTPUT->single_button(
-            new moodle_url('/mod/quiz/report.php', [
-                    'id' => $cm->id,
-                    'mode' => 'concorsi',
-                    'action' => 'downloadgrades',
-                ]
-            ),
-            get_string('downloadgradesfile', 'quiz_concorsi'),
-            'post'
-        );
-
         if (!empty($quiz->timeclose) && ($quiz->timeclose < time())) {
+            echo $OUTPUT->single_button(
+                new moodle_url('/mod/quiz/report.php', [
+                        'id' => $cm->id,
+                        'mode' => 'concorsi',
+                        'action' => 'downloadgrades',
+                    ]
+                ),
+                get_string('downloadgradesfile', 'quiz_concorsi'),
+                'post'
+            );
+
             $itemid = $this->quiz->id;
 
             $fs = get_file_storage();
@@ -138,6 +138,8 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             }
                         }
                     }
+                } else {
+                    $PAGE->requires->js_call_amd('quiz_concorsi/inhibit', 'init');
                 }
 
                 if (!empty($action)) {
@@ -220,6 +222,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
             }
         } else {
             echo html_writer::tag('h3', new lang_string('quiznotclosed', 'quiz_concorsi'));
+            $PAGE->requires->js_call_amd('quiz_concorsi/inhibit', 'init');
         }
 
         return true;
