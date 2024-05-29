@@ -747,10 +747,15 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     }
                     $displayoptions = $attemptobj->get_display_options(true);
 
-                    $content .= html_writer::tag('h2', get_string('questionnumber', 'quiz_concorsi', $number));
-                    $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_question_summary()));
-                    $content .= html_writer::tag('h3', get_string('answer', 'quiz_concorsi'));
-                    $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_response_summary()));
+                    if ($attemptobj->is_real_question($slot)) {
+                        $content .= html_writer::tag('h2', get_string('questionnumber', 'quiz_concorsi', $number));
+                        $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_question_summary()));
+                        $content .= html_writer::tag('h3', get_string('answer', 'quiz_concorsi'));
+                        $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_response_summary()));
+                    } else {
+                        $questiontext = $qa->get_question($slot)->questiontext;
+                        $content .= html_writer::tag('div', $questiontext);
+                    }
 
                     if (is_null($qa->get_fraction())) {
                         $mark = $qa->format_max_mark($displayoptions->markdp);
@@ -779,7 +784,6 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     }
 
                     $content .= html_writer::empty_tag('hr', []);
-
                 }
 
                 // Insert spreadsheet values for current attempt.
