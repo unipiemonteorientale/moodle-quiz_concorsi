@@ -462,23 +462,24 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         // Define spreadsheet column headers.
         $colnum = 0;
-        $myxls->write(0, $colnum, get_string('firstname'), $formatbc);
+        $myxls->write_string(0, $colnum, get_string('firstname'), $formatbc);
         $colnum++;
-        $myxls->write(0, $colnum, get_string('lastname'), $formatbc);
+        $myxls->write_string(0, $colnum, get_string('lastname'), $formatbc);
         $colnum++;
-        $myxls->write(0, $colnum, get_string('idnumber'), $formatbc);
+        $myxls->write_string(0, $colnum, get_string('idnumber'), $formatbc);
         $colnum++;
         // Show raw marks only if they are different from the grade (like on the view page).
         if ($quiz->grade != $quiz->sumgrades) {
-            $myxls->write(0, $colnum, get_string('marks', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->sumgrades), $formatbc);
+            $formattedgrade = quiz_format_grade($quiz, $quiz->sumgrades);
+            $myxls->write_string(0, $colnum, get_string('marks', 'quiz') . '/' . $formattedgrade, $formatbc);
             $colnum++;
         }
-        $myxls->write(0, $colnum, get_string('grade', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->grade), $formatbc);
+        $myxls->write_string(0, $colnum, get_string('grade', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->grade), $formatbc);
         $colnum++;
         foreach ($questions as $slot => $question) {
             $item = get_string('qbrief', 'quiz', $question->number);
             $item .= '/' . quiz_rescale_grade($question->maxmark, $quiz, 'question');
-            $myxls->write(0, $colnum, $item, $formatbc);
+            $myxls->write_string(0, $colnum, $item, $formatbc);
             $colnum++;
         }
 
@@ -486,14 +487,16 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $attempts = $DB->get_records('quiz_attempts', ['quiz' => $quiz->id, 'preview' => 0]);
         if (!empty($attempts)) {
             foreach ($attempts as $attempt) {
-                // Excel row data content.
-                $row = [];
-
                 $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
                 $student = $DB->get_record('user', ['id' => $attemptobj->get_userid()]);
-                $row['firstname'] = $student->firstname;
-                $row['lastname'] = $student->lastname;
-                $row['idnumber'] = $student->idnumber;
+
+                $colnum = 0;
+                $myxls->write_string($rownum, $colnum, $student->firstname, $format);
+                $colnum++;
+                $myxls->write_string($rownum, $colnum, $student->lastname, $format);
+                $colnum++;
+                $myxls->write_string($rownum, $colnum, $student->idnumber, $format);
+                $colnum++;
 
                 // Show marks (if the user is allowed to see marks at the moment).
                 $grade = quiz_rescale_grade($attempt->sumgrades, $quiz, false);
@@ -501,32 +504,19 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     if ($attempt->state != mod_quiz\quiz_attempt::FINISHED) {
                         // Cannot display grade.
                         if ($quiz->grade != $quiz->sumgrades) {
-                            $row['marks'] = '';
+                            $myxls->write($rownum, $colnum, '', $format);
+                            $colnum++;
                         }
-                        $row['grade'] = '';
-                    } else if (is_null($grade)) {
-                        // Show raw marks only if they are different from the grade (like on the view page).
-                        if ($quiz->grade != $quiz->sumgrades) {
-                            $row['marks'] = quiz_format_grade($quiz, $attempt->sumgrades);
-                        }
-                        $row['grade'] = quiz_format_grade($quiz, $grade);
+                        $myxls->write($rownum, $colnum, '', $format);
+                        $colnum++;
                     } else {
                         // Show raw marks only if they are different from the grade (like on the view page).
                         if ($quiz->grade != $quiz->sumgrades) {
-                            $row['marks'] = quiz_format_grade($quiz, $attempt->sumgrades);
+                            $myxls->write($rownum, $colnum, quiz_format_grade($quiz, $attempt->sumgrades), $format);
+                            $colnum++;
                         }
-                        // Now the scaled grade.
-                        $a = new stdClass();
-                        $a->grade = html_writer::tag('b', quiz_format_grade($quiz, $grade));
-                        $a->maxgrade = quiz_format_grade($quiz, $quiz->grade);
-                        if ($quiz->grade != 100) {
-                            $a->percent = html_writer::tag('b', format_float(
-                                $attempt->sumgrades * 100 / $quiz->sumgrades, 0));
-                            $formattedgrade = get_string('outofpercent', 'quiz', $a);
-                        } else {
-                            $formattedgrade = get_string('outof', 'quiz', $a);
-                        }
-                        $row['grade'] = quiz_format_grade($quiz, $grade);
+                        $myxls->write($rownum, $colnum, quiz_format_grade($quiz, $grade), $format);
+                        $colnum++;
                     }
                 }
 
@@ -543,15 +533,10 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     } else {
                         $grade = quiz_rescale_grade($qa->get_fraction() * $qa->get_max_mark(), $quiz, 'question');
                     }
-                    $row[$number] = $grade;
-                }
-
-                // Insert spreadsheet values for current attempt.
-                $colnum = 0;
-                foreach ($row as $item) {
-                    $myxls->write($rownum, $colnum, $item, $format);
+                    $myxls->write($rownum, $colnum, $grade, $format);
                     $colnum++;
                 }
+
                 $rownum++;
             }
 
