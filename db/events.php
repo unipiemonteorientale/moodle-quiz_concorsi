@@ -15,9 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Quiz report for concorsi version information.
+ * Add event handlers for the quiz
  *
  * @package   quiz_concorsi
+ * @category  event
  * @copyright 2023 UPO www.uniupo.it
  * @author    Roberto Pinna
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,11 +26,10 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2024052900;
-$plugin->requires = 2023042400;
-$plugin->component = 'quiz_concorsi';
-$plugin->maturity = MATURITY_STABLE;
-$plugin->release = '1.2';
-$plugin->dependencies = [
-    'theme_concorsi' => 2024052700,
+$observers = [
+    [
+        'eventname' => '\mod_quiz\event\attempt_submitted',
+        'callback' => '\quiz_concorsi\observers::attempt_submitted',
+        'internal' => false,
+    ],
 ];

@@ -66,5 +66,17 @@ function xmldb_quiz_concorsi_upgrade($oldversion) {
         }
     }
 
+    if ($oldversion < 2024052900) {
+        $themeconfigs = $DB->get_records('config_plugins', ['plugin' => 'theme_concorsi']);
+
+        $confignames = ['anonymizedates', 'usernamehash', 'allowrefinalize', 'encryptzipfiles', 'suspendmode', 'cryptkey'];
+        foreach ($themeconfigs as $config) {
+            if (in_array($config->name, $confignames)) {
+                $config->plugin = 'quiz_concorsi';
+                $DB->update_record('config_plugins', $config);
+            }
+        }
+    }
+
     return true;
 }

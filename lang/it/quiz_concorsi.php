@@ -25,6 +25,7 @@
 
 $string['pluginname'] = 'Archiviazione Concorsi';
 $string['concorsi'] = 'Archivia file del concorso';
+$string['concorsireport'] = 'Report Archiviazione Concorsi';
 $string['quiznotclosed'] = 'Si prega di chiudere il quiz prima di archiviare i file del concorso';
 $string['finalize'] = 'Finalizza i resoconti del concorso';
 $string['areyousure'] = 'Sei sicuro di voler finalizzare i resoconti del concorso?<br>Dopo non sar&agrave; possibile modificare i resoconti.';
