@@ -462,23 +462,23 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         // Define spreadsheet column headers.
         $colnum = 0;
-        $myxls->write(0, $colnum, get_string('firstname'), $format);
+        $myxls->write(0, $colnum, get_string('firstname'), $formatbc);
         $colnum++;
-        $myxls->write(0, $colnum, get_string('lastname'), $format);
+        $myxls->write(0, $colnum, get_string('lastname'), $formatbc);
         $colnum++;
-        $myxls->write(0, $colnum, get_string('idnumber'), $format);
+        $myxls->write(0, $colnum, get_string('idnumber'), $formatbc);
         $colnum++;
         // Show raw marks only if they are different from the grade (like on the view page).
         if ($quiz->grade != $quiz->sumgrades) {
-            $myxls->write(0, $colnum, get_string('marks', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->sumgrades), $format);
+            $myxls->write(0, $colnum, get_string('marks', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->sumgrades), $formatbc);
             $colnum++;
         }
-        $myxls->write(0, $colnum, get_string('grade', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->grade), $format);
+        $myxls->write(0, $colnum, get_string('grade', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->grade), $formatbc);
         $colnum++;
         foreach ($questions as $slot => $question) {
             $item = get_string('qbrief', 'quiz', $question->number);
             $item .= '/' . quiz_rescale_grade($question->maxmark, $quiz, 'question');
-            $myxls->write(0, $colnum, $item, $format);
+            $myxls->write(0, $colnum, $item, $formatbc);
             $colnum++;
         }
 
