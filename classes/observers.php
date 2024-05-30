@@ -28,9 +28,6 @@ namespace quiz_concorsi;
 use context_module;
 use html_writer;
 
-
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Observers class.
  *
@@ -114,7 +111,7 @@ class observers {
                         $questiontext = $attemptobj->get_question_attempt($slot)->get_question($slot)->questiontext;
                         $content .= html_writer::tag('div', $questiontext);
                     }
-                    $content .= html_writer::empty_tag('hr', array());
+                    $content .= html_writer::empty_tag('hr', []);
                 }
 
                 $tempdir = make_temp_directory('core_plugin/quiz_concorsi') . '/';
@@ -128,7 +125,7 @@ class observers {
                     $userdata .= ' - '. sha1($config->cryptkey.$USER->username);
                 }
                 $doc->SetHeaderData(null, null, null, fullname($USER) . $userdata);
-                $doc->SetFooterData(array(0, 0, 0), array(0, 0, 0));
+                $doc->SetFooterData([0, 0, 0], [0, 0, 0]);
 
                 $doc->SetTopMargin(18);
                 $doc->SetHeaderMargin(PDF_MARGIN_HEADER);

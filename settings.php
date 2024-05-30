@@ -31,7 +31,7 @@ if ($ADMIN->fulltree) {
     $name = 'quiz_concorsi/anonymizedates';
     $title = get_string('anonymizedates', 'quiz_concorsi');
     $description = get_string('anonymizedates_desc', 'quiz_concorsi');
-    $choices = array();
+    $choices = [];
     $choices[0] = new lang_string('no');
     $choices[1] = new lang_string('clear', 'quiz_concorsi');
     $choices[2] = new lang_string('coursestartdate', 'quiz_concorsi');
@@ -41,25 +41,25 @@ if ($ADMIN->fulltree) {
     $name = 'quiz_concorsi/usernamehash';
     $title = get_string('usernamehash', 'quiz_concorsi');
     $description = get_string('usernamehash_desc', 'quiz_concorsi');
-    $yesno = array(0 => new lang_string('no'), 1 => new lang_string('yes'));
+    $yesno = [0 => new lang_string('no'), 1 => new lang_string('yes')];
     $settings->add(new admin_setting_configselect($name, $title, $description, '0', $yesno));
 
     $name = 'quiz_concorsi/allowrefinalize';
     $title = get_string('allowrefinalize', 'quiz_concorsi');
     $description = get_string('allowrefinalize_desc', 'quiz_concorsi');
-    $yesno = array(0 => new lang_string('no'), 1 => new lang_string('yes'));
+    $yesno = [0 => new lang_string('no'), 1 => new lang_string('yes')];
     $settings->add(new admin_setting_configselect($name, $title, $description, '0', $yesno));
 
     $name = 'quiz_concorsi/encryptzipfiles';
     $title = get_string('encryptzipfiles', 'quiz_concorsi');
     $description = get_string('encryptzipfiles_desc', 'quiz_concorsi');
-    $yesno = array(0 => new lang_string('no'), 1 => new lang_string('yes'));
+    $yesno = [0 => new lang_string('no'), 1 => new lang_string('yes')];
     $settings->add(new admin_setting_configselect($name, $title, $description, '0', $yesno));
 
     $name = 'quiz_concorsi/suspendmode';
     $title = get_string('suspendmode', 'quiz_concorsi');
     $description = get_string('suspendmode_desc', 'quiz_concorsi');
-    $choices = array();
+    $choices = [];
     $choices[0] = new lang_string('none');
     $choices[1] = new lang_string('enrolled', 'quiz_concorsi');
     $choices[2] = new lang_string('attempted', 'quiz_concorsi');
