@@ -71,5 +71,6 @@ $string['enrolled'] = 'All course enrolled candidates';
 $string['closequiz'] = 'Close quiz';
 $string['closequizconfirm'] = 'Close quiz now';
 $string['lockout'] = 'If you confirm to close this quiz, students attempting the quiz will be kicked out and any unsaved answers will be lost.';
-$string['usersuspended'] = 'Users that had attempted the quiz were suspended. They could not login anymore.' ;
+$string['usersuspended'] = 'Users that had attempted the quiz were suspended. They could not login anymore.';
 $string['allusersuspended'] = 'All users that enrolled as participant in this course  were suspended. They could not login anymore.';
+$string['notsuspended'] = 'Some users could not be suspended. Please contact your administrator.';

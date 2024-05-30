@@ -115,16 +115,9 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         if (!empty($quiz->timeclose) && ($quiz->timeclose <= time())) {
             if (($action == 'finalize') || ($action == 'zip') || ($action == 'closequiz')) {
                 $suspended = $this->suspend_quiz_users();
-                if ($suspended) {
-                    $suspendmode = get_config('quiz_concorsi', 'suspendmode');
-                    switch ($suspendmode) {
-                        case '':
-                            notice(new lang_string('usersuspended', 'quiz_concorsi'));
-                        break;
-                        case '':
-                            notice(new lang_string('allusersuspended', 'quiz_concorsi'));
-                        break;
-                    }
+                if (!$suspended) {
+                    $message = get_string('notsuspended', 'quiz_concorsi');
+                    \core\notification::add($message, \core\output\notification::NOTIFY_ERROR);
                 }
             }
 
@@ -243,7 +236,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 }
             }
         } else {
-            echo html_writer::tag('h3', new lang_string('quiznotclosed', 'quiz_concorsi'));
+            echo html_writer::tag('h3', get_string('quiznotclosed', 'quiz_concorsi'));
             $PAGE->requires->js_call_amd('quiz_concorsi/inhibit', 'init');
 
             if (has_capability('mod/quiz:manage', $this->context)) {
@@ -423,6 +416,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $suspendmode = get_config('quiz_concorsi', 'suspendmode');
 
         $result = true;
+        $countsuspended = 0;
 
         switch ($suspendmode) {
             case ATTEMPTED:
@@ -431,9 +425,16 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                 if (!empty($attempts)) {
                     foreach ($attempts as $attempt) {
                         $attemptobj = quiz_create_attempt_handling_errors($attempt->id, $this->cm->id);
-                        $result = $result && $DB->set_field('user', 'suspended', 1, ['id' => $attemptobj->get_userid()]);
+                        $student = $DB->get_record('user', ['id' => $attemptobj->get_userid()]);
+                        if (!empty($student) && ($student->suspended == 0)) {
+                            $result = $result && $DB->set_field('user', 'suspended', 1, ['id' => $student->id]);
+                            if ($result) {
+                                $countsuspended++;
+                            }
+                        }
                     }
                 }
+                $message = get_string('usersuspended', 'quiz_concorsi');
             break;
             case ENROLLED:
                 $students = get_enrolled_users($this->context, 'mod/quiz:attempt');
@@ -441,11 +442,19 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     foreach ($students as $student) {
                         if ($student->suspended == 0) {
                             $result = $result && $DB->set_field('user', 'suspended', 1, ['id' => $student->id]);
+                            if ($result) {
+                                $countsuspended++;
+                            }
                         }
                     }
                 }
+                $message = get_string('allusersuspended', 'quiz_concorsi');
             break;
         }
+        if ($countsuspended > 0) {
+            \core\notification::add($message, \core\output\notification::NOTIFY_INFO);
+        }
+
         return $result;
     }
 
