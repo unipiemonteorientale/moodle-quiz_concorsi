@@ -75,7 +75,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
      * @throws moodle_exception
      */
     public function display($quiz, $cm, $course) {
-        global $OUTPUT, $PAGE;
+        global $OUTPUT, $PAGE, $DB;
 
         $this->quiz = $quiz;
         $this->cm = $cm;
@@ -85,7 +85,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         $this->reviewarea = 'quiz_reviews';
         $this->finalizedarea = 'finalized';
 
-        $canrefinalize = get_config('theme_concorsi', 'allowrefinalize');
+        $canrefinalize = get_config('quiz_concorsi', 'allowrefinalize');
 
         // Check permissions.
         $this->context = context_module::instance($cm->id);
@@ -93,16 +93,41 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         $action = optional_param('action', '', PARAM_ALPHA);
         if (!empty($action)) {
-            if ($action == 'downloadgrades') {
-                $this->download_grades_file();
-                exit();
+            if ($action == 'closequiz') {
+                if (has_capability('mod/quiz:manage', $this->context)) {
+                    $now = time();
+                    $DB->set_field('quiz', 'timeclose', $now, ['id' => $quiz->id]);
+                    $quiz->timeclose = $now;
+                }
+            }
+
+            if (!empty($quiz->timeclose) && ($quiz->timeclose <= time())) {
+                if ($action == 'downloadgrades') {
+                    $this->download_grades_file();
+                    exit();
+                }
             }
         }
 
         // Start output.
         $this->print_header_and_tabs($cm, $course, $quiz, 'concorsi');
 
-        if (!empty($quiz->timeclose) && ($quiz->timeclose < time())) {
+        if (!empty($quiz->timeclose) && ($quiz->timeclose <= time())) {
+            if (($action == 'finalize') || ($action == 'zip') || ($action == 'closequiz')) {
+                $suspended = $this->suspend_quiz_users();
+                if ($suspended) {
+                    $suspendmode = get_config('quiz_concorsi', 'suspendmode');
+                    switch ($suspendmode) {
+                        case '':
+                            notice(new lang_string('usersuspended', 'quiz_concorsi'));
+                        break;
+                        case '':
+                            notice(new lang_string('allusersuspended', 'quiz_concorsi'));
+                        break;
+                    }
+                }
+            }
+
             echo $OUTPUT->single_button(
                 new moodle_url('/mod/quiz/report.php', [
                         'id' => $cm->id,
@@ -151,9 +176,6 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             $archivepassword = optional_param('archivepassword', '', PARAM_RAW);
                             $zipped = $this->zip_reviews($files, $archivepassword);
                         }
-                        if (($action == 'finalize') || ($action == 'zip')) {
-                            $suspened = $this->suspend_quiz_users();
-                        }
                         $finalizedfiles = $fs->get_area_files($this->context->id, $this->component, $this->finalizedarea, $itemid);
                     }
                 }
@@ -164,7 +186,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
                 if (has_capability('quiz/concorsi:archivereviews', $this->context)) {
                     if (!$zipped) {
-                        $encryptzipfiles = get_config('theme_concorsi', 'encryptzipfiles');
+                        $encryptzipfiles = get_config('quiz_concorsi', 'encryptzipfiles');
                         $actionfields = [
                             'id' => $cm->id,
                             'mode' => 'concorsi',
@@ -223,6 +245,29 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         } else {
             echo html_writer::tag('h3', new lang_string('quiznotclosed', 'quiz_concorsi'));
             $PAGE->requires->js_call_amd('quiz_concorsi/inhibit', 'init');
+
+            if (has_capability('mod/quiz:manage', $this->context)) {
+                $confirmattrs = [
+                    'name' => 'closequiz',
+                    'data-modal' => 'confirmation',
+                    'data-modal-yes-button-str' => json_encode(['closequizconfirm', 'quiz_concorsi']),
+                    'data-modal-title-str' => json_encode(['attention', 'quiz_concorsi']),
+                    'data-modal-content-str' => json_encode(['lockout', 'quiz_concorsi']),
+                    'data-modal-destination' => $destination,
+                ];
+                echo $OUTPUT->single_button(
+                    new moodle_url('/mod/quiz/report.php', [
+                            'id' => $cm->id,
+                            'mode' => 'concorsi',
+                            'action' => 'closequiz',
+                        ]
+                    ),
+                    get_string('closequiz', 'quiz_concorsi'),
+                    'post',
+                    $confirmattrs
+                );
+                $PAGE->requires->js_call_amd('quiz_concorsi/actions', 'init');
+            }
         }
 
         return true;
@@ -375,7 +420,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
     private function suspend_quiz_users() {
         global $DB;
 
-        $suspendmode = get_config('theme_concorsi', 'suspendmode');
+        $suspendmode = get_config('quiz_concorsi', 'suspendmode');
 
         $result = true;
 
@@ -558,7 +603,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         $quiz = $this->quiz;
 
-        $canrefinalize = get_config('theme_concorsi', 'allowrefinalize');
+        $canrefinalize = get_config('quiz_concorsi', 'allowrefinalize');
 
         $nowstr = userdate(time(), '%F-%T');
 

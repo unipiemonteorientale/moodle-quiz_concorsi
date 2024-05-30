@@ -53,7 +53,6 @@ $string['concorsi:downloadreviews'] = 'Download quiz reviews';
 // PRIVACY.
 $string['privacy:metadata'] = 'The quiz Archive public exam files plugin does not store any personal data about any user.';
 
-$string['filehash'] = 'File hash: {$a}';
 $string['concorsisettings'] = 'Concorsi settings';
 $string['clear'] = 'Clear';
 $string['coursestartdate'] = 'Set at course start date';
@@ -69,4 +68,8 @@ $string['suspendmode'] = 'Suspend mode';
 $string['suspendmode_desc'] = 'Candidate user will be suspended on quiz closing. You can choose if suspend all course enrolled candidates or only ones that attempt quizzes';
 $string['attempted'] = 'Only candidates that attempted quiz';
 $string['enrolled'] = 'All course enrolled candidates';
-
+$string['closequiz'] = 'Close quiz';
+$string['closequizconfirm'] = 'Close quiz now';
+$string['lockout'] = 'If you confirm to close this quiz, students attempting the quiz will be kicked out and any unsaved answers will be lost.';
+$string['usersuspended'] = 'Users that had attempted the quiz were suspended. They could not login anymore.' ;
+$string['allusersuspended'] = 'All users that enrolled as participant in this course  were suspended. They could not login anymore.';

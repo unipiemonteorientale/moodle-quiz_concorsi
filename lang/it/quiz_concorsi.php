@@ -52,3 +52,22 @@ $string['concorsi:archivereviews'] = 'Archivia resoconti del concorso';
 $string['concorsi:downloadreviews'] = 'Download resoconti del concorso';
 // PRIVACY.
 $string['privacy:metadata'] = 'Il plugin Archiviazione Concorsi quiz non salva alcun dato personale degli utenti.';
+
+$string['concorsisettings'] = 'Impostazioni Concorsi';
+$string['clear'] = 'Svuota';
+$string['coursestartdate'] = 'Imposta alla data di inizio corso';
+$string['anonymizedates'] = 'Anonimizza le date dei tentativi';
+$string['anonymizedates_desc'] = 'Se abilitato le date di tutti i tentativi dei quiz saranno cancellate eo impostate alla data di inizio del corso in modo da anonomizzare il pi&ugrave; possibile l\'attività dell\'utente';
+$string['usernamehash'] = 'Aggiungi gli username mascherati nei PDF che contengono i tentativi';
+$string['usernamehash_desc'] = 'Se abilitato i PDF che contegono i tentativi includeranno lo username mascherato. Questo può essere utile in caso di ripudio del tentativo';
+$string['allowrefinalize'] = 'Rifinalizza';
+$string['allowrefinalize_desc'] = 'Se abilitato, gli utenti abilitati potranno finalizzare pi&ugrave; di una volta i concorsi. Questo potrebbe diminuire l\'anomizzazione dei candidati';
+$string['encryptzipfiles'] = 'Criptare gli zip';
+$string['encryptzipfiles_desc'] = 'Se abilitato, verr&agrave; chiesta una password per criptare i file zip che contengono i PDF delle prove';
+$string['suspendmode'] = 'Modalit&agrave; di sospensione';
+$string['suspendmode_desc'] = 'Gli utenti dei candidati verranno sospesi alla chiusura del quiz. Puoi scegliere se sospendere tutti i candidati iscritti al corso o solo quelli che hanno tentato il quiz';
+$string['attempted'] = 'Solo i candidati che hanno tentato il quiz';
+$string['enrolled'] = 'Tutti i candidati iscritti al corso';
+$string['closequiz'] = 'Chiudi quiz';
+$string['closequizconfirm'] = 'Chiudi ora il quiz';
+$string['lockout'] = 'Se confermi di chiudere questo quiz, gli studenti che stanno tentando il quiz saranno espulsi e le risposte non salvate saranno perse';
