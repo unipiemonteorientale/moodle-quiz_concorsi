@@ -251,7 +251,6 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     'data-modal-yes-button-str' => json_encode(['closequizconfirm', 'quiz_concorsi']),
                     'data-modal-title-str' => json_encode(['attention', 'quiz_concorsi']),
                     'data-modal-content-str' => json_encode(['lockout', 'quiz_concorsi']),
-                    'data-modal-destination' => $destination,
                 ];
                 echo $OUTPUT->single_button(
                     new moodle_url('/mod/quiz/report.php', [
@@ -839,7 +838,6 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     $rightanswer = rtrim($qa->get_right_answer_summary());
                     if (!empty($rightanswer)) {
                         $content .= html_writer::tag('h3', get_string('rightanswer', 'quiz_concorsi'));
-                        $content .= html_writer::tag('pre', $rightanswer);
                         $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $rightanswer));
                     }
 
@@ -848,7 +846,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                         $content .= html_writer::tag('h3', get_string('comment', 'question'));
                         $comment = $manualcomment[0];
                         $commentformat = $manualcomment[1];
-                        $commenttext = $qa->get_question()->html_to_text($coment, $commentformat);
+                        $commenttext = $qa->get_question()->html_to_text($comment, $commentformat);
                         $content .= html_writer::tag('<pre>', str_replace(['<', '>'], ['&lt;', '&gt;'], $commenttext));
                     }
 
