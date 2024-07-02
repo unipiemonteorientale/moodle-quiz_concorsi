@@ -112,6 +112,11 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
         // Start output.
         $this->print_header_and_tabs($cm, $course, $quiz, 'concorsi');
 
+        $status = $this->get_attempts_status();
+        if (!empty($status)) {
+            echo html_writer::tag('p', $status);
+        }
+
         if (!empty($quiz->timeclose) && ($quiz->timeclose <= time())) {
             if (($action == 'finalize') || ($action == 'zip') || ($action == 'closequiz')) {
                 $suspended = $this->suspend_quiz_users();
@@ -457,6 +462,31 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
 
         return $result;
     }
+
+    /**
+     * Count attempts and return status string.
+     *
+     * @return string Status string o empty string.
+     */
+    private function get_attempts_status() {
+        global $DB;
+
+        $attempts = $DB->get_records('quiz_attempts', ['quiz' => $this->quiz->id, 'preview' => 0]);
+        if (!empty($attempts)) {
+            $a = new \stdClass();
+            $a->existing = 0;
+            $a->finished = 0;
+            foreach ($attempts as $attempt) {
+                $a->existing++;
+                if ($attempt->state == mod_quiz\quiz_attempt::FINISHED) {
+                    $a->finished++;
+                }
+            }
+            return get_string('attemptstatus', 'quiz_concorsi', $a);
+        }
+        return '';
+    }
+
 
     /**
      * Check that all quiz attempt questions are graded.

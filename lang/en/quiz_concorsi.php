@@ -47,6 +47,7 @@ $string['gradebook'] = 'Gradebook';
 $string['grades'] = 'Grades';
 $string['attemptsarchive'] = 'Attempts archive';
 $string['typepassword'] = 'Please enter zip file encryption password:';
+$string['attemptstatus'] = 'Finished {$a->finished} attempts of {$a->existing} started';
 
 $string['concorsi:archivereviews'] = 'Archive quiz reviews';
 $string['concorsi:downloadreviews'] = 'Download quiz reviews';
