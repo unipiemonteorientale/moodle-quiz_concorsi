@@ -7,9 +7,11 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 ### Added
 - inhibit report menu before zip creation
+- status line (started/finished) in report page
 
 ### Fixed
 - download grades sorting
+- idnumbers display in grade excel files
 
 ## 1.1 - 2023-10-24
 ### Added

@@ -855,10 +855,38 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     $content .= html_writer::empty_tag('hr', []);
                 }
 
+                if ($rownum == 0) {
+                    // Define spreadsheet column headers.
+                    $colnum = 0;
+                    $myxls->write_string(0, $colnum, get_string('firstname'), $formatbc);
+                    $colnum++;
+                    $myxls->write_string(0, $colnum, get_string('lastname'), $formatbc);
+                    $colnum++;
+                    $myxls->write_string(0, $colnum, get_string('username'), $formatbc);
+                    $colnum++;
+                    $myxls->write_string(0, $colnum, get_string('idnumber'), $formatbc);
+                    $colnum++;
+                    $myxls->write_string(0, $colnum, get_string('filehash', 'quiz_concorsi'), $formatbc);
+                    $colnum++;
+                    // Show raw marks only if they are different from the grade (like on the view page).
+                    if ($quiz->grade != $quiz->sumgrades) {
+                        $formattedgrade = quiz_format_grade($quiz, $quiz->sumgrades);
+                        $myxls->write_string(0, $colnum, get_string('marks', 'quiz') . '/' . $formattedgrade, $formatbc);
+                        $colnum++;
+                    }
+                    $gradestring = get_string('grade', 'quiz') . '/' . quiz_format_grade($quiz, $quiz->grade);
+                    $myxls->write_string(0, $colnum, $gradestring, $formatbc);
+                    $rownum++;
+                }
+
                 // Insert spreadsheet values for current attempt.
                 $colnum = 0;
                 foreach ($row as $item) {
-                    $myxls->write($rownum, $colnum, $item, $format);
+                    if (in_array($item, ['marks', 'grade'])) {
+                        $myxls->write($rownum, $colnum, $item, $format);
+                    } else {
+                        $myxls->write_string($rownum, $colnum, $item, $format);
+                    }
                     $colnum++;
                 }
                 $rownum++;
