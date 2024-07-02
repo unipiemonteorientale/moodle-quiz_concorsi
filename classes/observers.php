@@ -97,6 +97,7 @@ class observers {
                 $attemptobj = new \mod_quiz\quiz_attempt($attempt, $quiz, $cm, $course);
                 $slots = $attemptobj->get_slots();
                 $content = '';
+
                 foreach ($slots as $slot) {
                     $originalslot = $attemptobj->get_original_slot($slot);
                     $number = $attemptobj->get_question_number($originalslot);
@@ -104,9 +105,12 @@ class observers {
                     if ($attemptobj->is_real_question($slot)) {
                         $qa = $attemptobj->get_question_attempt($slot);
                         $content .= html_writer::tag('h2', get_string('questionnumber', 'quiz_concorsi', $number));
-                        $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_question_summary()));
+                        $qsummary = str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_question_summary());
+                        $content .= html_writer::tag('div', $qsummary);
+
                         $content .= html_writer::tag('h3', get_string('answer', 'quiz_concorsi'));
-                        $content .= html_writer::tag('pre', str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_response_summary()));
+                        $rsummary = str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_response_summary());
+                        $content .= html_writer::tag('div', $rsummary);
                     } else {
                         $questiontext = $attemptobj->get_question_attempt($slot)->get_question($slot)->questiontext;
                         $content .= html_writer::tag('div', $questiontext);
