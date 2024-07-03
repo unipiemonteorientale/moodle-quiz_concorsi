@@ -106,11 +106,11 @@ class observers {
                         $qa = $attemptobj->get_question_attempt($slot);
                         $content .= html_writer::tag('h2', get_string('questionnumber', 'quiz_concorsi', $number));
                         $qsummary = str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_question_summary());
-                        $content .= html_writer::tag('div', $qsummary);
+                        $content .= html_writer::tag('pre', $qsummary);
 
                         $content .= html_writer::tag('h3', get_string('answer', 'quiz_concorsi'));
                         $rsummary = str_replace(['<', '>'], ['&lt;', '&gt;'], $qa->get_response_summary());
-                        $content .= html_writer::tag('div', $rsummary);
+                        $content .= html_writer::tag('pre', $rsummary);
                     } else {
                         $questiontext = $attemptobj->get_question_attempt($slot)->get_question($slot)->questiontext;
                         $content .= html_writer::tag('div', $questiontext);
