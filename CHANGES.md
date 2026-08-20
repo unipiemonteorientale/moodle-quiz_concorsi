@@ -5,6 +5,12 @@ Changelog
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
+
+## 1.3 - 2026-08-20
+### Fixed
+- fixed library loading for Moodle 5.0 and above
+
+## 1.2 - 2024-05-29
 ### Added
 - inhibit report menu before zip creation
 - status line (started/finished) in report page

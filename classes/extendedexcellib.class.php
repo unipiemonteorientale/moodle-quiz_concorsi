@@ -25,7 +25,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once("$CFG->libdir/phpspreadsheet/vendor/autoload.php");
+if (file_exists($CFG->libdir . '/phpspreadsheet/vendor/autoload.php')) {
+    require_once($CFG->libdir . '/phpspreadsheet/vendor/autoload.php');
+}
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 

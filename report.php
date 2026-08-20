@@ -24,6 +24,7 @@
  */
 
 use mod_quiz\local\reports\report_base;
+use mod_quiz\quiz_attempt;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -214,7 +215,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                             'name' => 'finalize',
                             'data-modal' => 'confirmation',
                             'data-modal-yes-button-str' => json_encode(['finalizeconfirm', 'quiz_concorsi']),
-                            'data-modal-destination' => $destination,
+                            'data-modal-destination' => '',
                         ];
                         if (!$this->all_attempts_graded()) {
                             $confirmattrs['data-modal-title-str'] = json_encode(['attention', 'quiz_concorsi']);
@@ -251,6 +252,7 @@ class quiz_concorsi_report extends mod_quiz\local\reports\report_base {
                     'data-modal-yes-button-str' => json_encode(['closequizconfirm', 'quiz_concorsi']),
                     'data-modal-title-str' => json_encode(['attention', 'quiz_concorsi']),
                     'data-modal-content-str' => json_encode(['lockout', 'quiz_concorsi']),
+                    'data-modal-destination' => $destination,
                 ];
                 echo $OUTPUT->single_button(
                     new moodle_url('/mod/quiz/report.php', [
